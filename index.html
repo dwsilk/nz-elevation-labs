@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>New Zealand Elevation Labs</title>
+</head>
+<body>
+
+<header id="hdr" role="banner">
+  <span class="hdr-page">New Zealand Elevation Labs</span>
+  <div class="hdr-sp"></div>
+  <a class="hdr-a" href="https://basemaps.linz.govt.nz" target="_blank" rel="noopener">
+    LINZ Basemaps
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-label="opens in new tab">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      <polyline points="15 3 21 3 21 9"/>
+      <line x1="10" y1="14" x2="21" y2="3"/>
+    </svg>
+  </a>
+  <a class="hdr-a" href="https://github.com/linz/elevation" target="_blank" rel="noopener">
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2z"/></svg>
+    GitHub
+  </a>
+</header>
+
+<div id="map-wrap">
+  <div id="map" role="application" aria-label="Elevation map of New Zealand"></div>
+
+  <div id="legend" role="complementary" aria-label="Map legend">
+    <div id="leg-elev">
+      <div class="leg-title">Elevation (m)</div>
+      <canvas id="leg-bar" width="136" height="13"></canvas>
+      <div class="leg-lbls"><span id="leg-lo">0</span><span id="leg-hi">3000</span></div>
+    </div>
+    <div id="leg-cov" class="hidden">
+      <div class="leg-title">Dataset age</div>
+      <div class="cov-age-grad"></div>
+      <div class="leg-lbls">
+        <span id="cov-age-oldest"></span>
+        <span id="cov-age-newest"></span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<aside id="panel" role="complementary" aria-label="Visualisation controls">
+  <div id="pan-global">
+    <div class="sec-lbl">Dataset</div>
+    <div class="dem-dsm-toggle">
+      <button class="dsm-btn active" id="btn-dem">DEM</button>
+      <button class="dsm-btn" id="btn-dsm">DSM</button>
+    </div>
+    <p class="dsm-desc" id="dsm-desc">Digital Elevation Model — bare earth, vegetation and buildings removed.</p>
+    <div id="exag-wrap" class="hidden">
+      <div class="sl-wrap">
+        <div class="opt-row">
+          <label for="sl-exag">Vertical exaggeration</label>
+          <span class="sl-val" id="sl-exag-v">1.0x</span>
+        </div>
+        <input type="range" id="sl-exag" min="1" max="30" value="1" step="1"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="pan-tabs">
+    <button class="pan-tab active" data-tab="elevation">Colour Ramp</button>
+    <button class="pan-tab" data-tab="hillshade">Hillshade</button>
+    <button class="pan-tab" data-tab="contour">Contours</button>
+    <button class="pan-tab" data-tab="coverage">Coverage</button>
+  </div>
+
+  <!-- ── ELEVATION TAB ── -->
+  <div class="pan-body" id="tab-elevation">
+    <div>
+      <div class="sec-lbl">Presets</div>
+      <div class="presets" id="presets"></div>
+    </div>
+    <div>
+      <div class="sec-lbl">Colour stops</div>
+      <div class="stop-list" id="stop-list"></div>
+      <button class="add-btn" id="add-stop">+ Add stop</button>
+    </div>
+    <div>
+      <div class="sec-lbl">Preview</div>
+      <div id="ramp-wrap"><canvas id="ramp-cv" width="270" height="20"></canvas></div>
+      <div class="ramp-lbls"><span>0 m</span><span>1500 m</span><span>3000 m</span></div>
+    </div>
+    <div>
+      <div class="sec-lbl">Options</div>
+      <div class="sl-wrap">
+        <div class="opt-row">
+          <label for="sl-op">Colour ramp opacity</label>
+          <span class="sl-val" id="sl-op-v">100%</span>
+        </div>
+        <input type="range" id="sl-op" min="0" max="100" value="100" step="1"/>
+      </div>
+    </div>
+    <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
+      Elevation © <a href="https://basemaps.linz.govt.nz" style="color:#bbb" target="_blank" rel="noopener">LINZ Basemaps</a> · terrain-RGB · CC BY 4.0
+    </p>
+  </div>
+
+  <!-- ── CONTOUR TAB ── -->
+  <div class="pan-body hidden" id="tab-contour">
+    <div>
+      <div class="sec-lbl">Backdrop</div>
+      <select id="sel-ct-backdrop" class="hs-select">
+        <option value="igor-dem">Igor Hillshade — DEM</option>
+        <option value="igor-dsm">Igor Hillshade — DSM</option>
+        <option value="aerial">Aerial Imagery</option>
+      </select>
+    </div>
+    <div>
+      <div class="sec-lbl">Presets</div>
+      <div class="presets">
+        <button class="pre-btn ct-pre-btn active" id="ct-pre-standard" title="Standard">
+          <div class="ct-pre-sw" style="background:#f5f5f5;border-bottom:1px solid var(--bdr)">
+            <svg width="100%" height="26" preserveAspectRatio="none" viewBox="0 0 120 26">
+              <line x1="0" y1="19" x2="120" y2="19" stroke="#aaa" stroke-width="1"/>
+              <line x1="0" y1="13" x2="120" y2="13" stroke="#aaa" stroke-width="1"/>
+              <line x1="0" y1="7"  x2="120" y2="7"  stroke="#444" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="pre-lbl">Standard</span>
+        </button>
+        <button class="pre-btn ct-pre-btn" id="ct-pre-topo50" title="NZ Topo50">
+          <div class="ct-pre-sw" style="background:#e8f0dc;border-bottom:1px solid var(--bdr)">
+            <svg width="100%" height="26" preserveAspectRatio="none" viewBox="0 0 120 26">
+              <line x1="0" y1="19" x2="120" y2="19" stroke="#c8a06e" stroke-width="1"/>
+              <line x1="0" y1="13" x2="120" y2="13" stroke="#c8a06e" stroke-width="1"/>
+              <line x1="0" y1="7"  x2="120" y2="7"  stroke="#b07830" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="pre-lbl">NZ Topo50</span>
+        </button>
+        <button class="pre-btn ct-pre-btn" id="ct-pre-white" title="Aerial — White">
+          <div class="ct-pre-sw" style="background:#2a2a2a;border-bottom:1px solid var(--bdr)">
+            <svg width="100%" height="26" preserveAspectRatio="none" viewBox="0 0 120 26">
+              <line x1="0" y1="19" x2="120" y2="19" stroke="#cccccc" stroke-width="1"/>
+              <line x1="0" y1="13" x2="120" y2="13" stroke="#cccccc" stroke-width="1"/>
+              <line x1="0" y1="7"  x2="120" y2="7"  stroke="#ffffff" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="pre-lbl">White</span>
+        </button>
+        <button class="pre-btn ct-pre-btn" id="ct-pre-cyan" title="Aerial — Cyan">
+          <div class="ct-pre-sw" style="background:#2a2a2a;border-bottom:1px solid var(--bdr)">
+            <svg width="100%" height="26" preserveAspectRatio="none" viewBox="0 0 120 26">
+              <line x1="0" y1="19" x2="120" y2="19" stroke="#80dfff" stroke-width="1"/>
+              <line x1="0" y1="13" x2="120" y2="13" stroke="#80dfff" stroke-width="1"/>
+              <line x1="0" y1="7"  x2="120" y2="7"  stroke="#00c8ff" stroke-width="2"/>
+            </svg>
+          </div>
+          <span class="pre-lbl">Cyan</span>
+        </button>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Contour lines</div>
+      <div class="opt-row" style="margin-bottom:4px">
+        <label for="tog-contour">Enable contours</label>
+        <label class="tog" style="margin-left:auto;flex-shrink:0">
+          <input type="checkbox" id="tog-contour" checked/>
+          <span class="tog-sl"></span>
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Zoom thresholds</div>
+      <div id="threshold-list"></div>
+      <button class="add-btn" id="add-threshold">+ Add threshold</button>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Line style</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="opt-row">
+          <label>Minor colour</label>
+          <input type="color" id="ct-minor-color" value="#999999" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+        <div class="opt-row">
+          <label>Major colour</label>
+          <input type="color" id="ct-major-color" value="#444444" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="ct-minor-width">Minor line width</label>
+            <span class="sl-val" id="ct-minor-width-v">1px</span>
+          </div>
+          <input type="range" id="ct-minor-width" min="0.5" max="4" value="1" step="0.5"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="ct-major-width">Major line width</label>
+            <span class="sl-val" id="ct-major-width-v">2px</span>
+          </div>
+          <input type="range" id="ct-major-width" min="0.5" max="6" value="2" step="0.5"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="ct-opacity">Line opacity</label>
+            <span class="sl-val" id="ct-opacity-v">80%</span>
+          </div>
+          <input type="range" id="ct-opacity" min="0" max="100" value="80" step="5"/>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Labels</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="opt-row">
+          <label for="tog-ct-labels">Show labels</label>
+          <label class="tog" style="margin-left:auto;flex-shrink:0">
+            <input type="checkbox" id="tog-ct-labels" checked/>
+            <span class="tog-sl"></span>
+          </label>
+        </div>
+        <div class="opt-row">
+          <label>Label colour</label>
+          <input type="color" id="ct-label-color" value="#333333" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="ct-text-size">Text size</label>
+            <span class="sl-val" id="ct-text-size-v">11px</span>
+          </div>
+          <input type="range" id="ct-text-size" min="8" max="18" value="11" step="1"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="ct-label-opacity">Label opacity</label>
+            <span class="sl-val" id="ct-label-opacity-v">90%</span>
+          </div>
+          <input type="range" id="ct-label-opacity" min="0" max="100" value="90" step="5"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row"><label for="sel-ct-placement">Symbol placement</label></div>
+          <select id="sel-ct-placement" class="hs-select">
+            <option value="line">Line</option>
+            <option value="line-center">Line center</option>
+          </select>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row"><label for="sel-ct-font">Font</label></div>
+          <select id="sel-ct-font" class="hs-select">
+            <option value="Noto Sans Bold">Noto Sans Bold</option>
+            <option value="Noto Sans Regular">Noto Sans Regular</option>
+            <option value="Noto Sans Italic">Noto Sans Italic</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Label halo</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="opt-row">
+          <label>Halo colour</label>
+          <input type="color" id="ct-halo-color" value="#ffffff" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="ct-halo-width">Halo width</label>
+            <span class="sl-val" id="ct-halo-width-v">2px</span>
+          </div>
+          <input type="range" id="ct-halo-width" min="0" max="6" value="2" step="0.5"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="ct-halo-blur">Halo blur</label>
+            <span class="sl-val" id="ct-halo-blur-v">0px</span>
+          </div>
+          <input type="range" id="ct-halo-blur" min="0" max="4" value="0" step="0.5"/>
+        </div>
+      </div>
+    </div>
+
+    <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
+      Contours computed client-side via <a href="https://github.com/onthegomap/maplibre-contour" style="color:#bbb" target="_blank" rel="noopener">maplibre-contour</a> from the DEM source.
+    </p>
+  </div>
+
+  <!-- ── HILLSHADE TAB ── -->
+  <div class="pan-body hidden" id="tab-hillshade">
+    <div>
+      <div class="opt-row">
+        <label for="tog-hs">Enable hillshade</label>
+        <label class="tog" style="margin-left:auto;flex-shrink:0">
+          <input type="checkbox" id="tog-hs" checked/>
+          <span class="tog-sl"></span>
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Source</div>
+      <select id="sel-hs-src" class="hs-select">
+        <optgroup label="Terrain Tile (MapLibre)">
+          <option value="terrain:standard">Standard</option>
+          <option value="terrain:basic">Basic</option>
+          <option value="terrain:igor">Igor</option>
+          <option value="terrain:combined">Combined</option>
+          <option value="terrain:multidirectional">Multidirectional</option>
+        </optgroup>
+        <optgroup label="Raster (LINZ)">
+          <option value="raster:standard">Standard Raster Hillshade</option>
+          <option value="raster:igor">Igor Raster Hillshade</option>
+        </optgroup>
+      </select>
+    </div>
+
+    <div id="hs-terrain-illumination">
+      <div class="sec-lbl">Illumination</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-hs-dir">Direction</label>
+            <span class="sl-val" id="sl-hs-dir-v">315°</span>
+          </div>
+          <input type="range" id="sl-hs-dir" min="0" max="359" value="315" step="1"/>
+        </div>
+        <div class="opt-row">
+          <label>Anchor</label>
+          <div class="dem-dsm-toggle" style="margin:0 0 0 auto;width:130px;flex-shrink:0">
+            <button class="dsm-btn active" id="btn-hs-map">Map</button>
+            <button class="dsm-btn" id="btn-hs-viewport">Viewport</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="hs-terrain-colours">
+      <div class="sec-lbl">Colours</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="opt-row">
+          <label>Shadow</label>
+          <input type="color" id="hs-shadow-color" value="#000000" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-hs-shadow-op">Shadow opacity</label>
+            <span class="sl-val" id="sl-hs-shadow-op-v">50%</span>
+          </div>
+          <input type="range" id="sl-hs-shadow-op" min="0" max="100" value="50" step="1"/>
+        </div>
+        <div class="opt-row">
+          <label>Highlight</label>
+          <input type="color" id="hs-highlight-color" value="#ffffff" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-hs-highlight-op">Highlight opacity</label>
+            <span class="sl-val" id="sl-hs-highlight-op-v">15%</span>
+          </div>
+          <input type="range" id="sl-hs-highlight-op" min="0" max="100" value="15" step="1"/>
+        </div>
+        <div class="opt-row">
+          <label>Accent</label>
+          <input type="color" id="hs-accent-color" value="#000000" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Intensity</div>
+      <div class="sl-wrap">
+        <div class="opt-row">
+          <label for="sl-hs" id="sl-hs-label">Exaggeration</label>
+          <span class="sl-val" id="sl-hs-v">0.5</span>
+        </div>
+        <input type="range" id="sl-hs" min="0" max="10" value="5" step="1"/>
+      </div>
+    </div>
+
+    <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
+      Hillshade via MapLibre terrain tile rendering or pre-computed <a href="https://basemaps.linz.govt.nz" style="color:#bbb" target="_blank" rel="noopener">LINZ Basemaps</a> rasters · CC BY 4.0
+    </p>
+  </div>
+
+  <!-- ── COVERAGE TAB ── -->
+  <div class="pan-body hidden" id="tab-coverage">
+    <div id="cov-detail" class="cov-detail hidden">
+      <div class="sec-lbl">Selected survey</div>
+      <div class="cov-detail-inner" id="cov-detail-inner"></div>
+      <button class="cov-clear-btn" id="cov-clear-btn">✕ Clear selection</button>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Options</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="cov-opacity">Fill opacity</label>
+            <span class="sl-val" id="cov-opacity-v">90%</span>
+          </div>
+          <input type="range" id="cov-opacity" min="0" max="100" value="90" step="1"/>
+        </div>
+        <div class="opt-row">
+          <label for="tog-cov-labels">Show labels</label>
+          <label class="tog" style="margin-left:auto;flex-shrink:0">
+            <input type="checkbox" id="tog-cov-labels" checked/>
+            <span class="tog-sl"></span>
+          </label>
+        </div>
+        <div class="opt-row">
+          <label for="tog-cov-outline">Show outline</label>
+          <label class="tog" style="margin-left:auto;flex-shrink:0">
+            <input type="checkbox" id="tog-cov-outline" checked/>
+            <span class="tog-sl"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="cov-stats" class="hidden"></div>
+
+    <div id="yr-range-section"></div>
+
+    <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
+      Coverage data: <a href="https://nz-elevation.s3-ap-southeast-2.amazonaws.com/new-zealand/new-zealand/dem_1m/2193/capture-dates.geojson" style="color:#bbb" target="_blank" rel="noopener">LINZ NZ Elevation</a> · CC BY 4.0
+    </p>
+  </div>
+</aside>
+
+<footer id="ftr" role="contentinfo">
+  <div class="ftr-sp"></div>
+  <span class="ftr-attr">Powered by MapLibre GL JS 5 · Tiles © LINZ CC BY 4.0</span>
+</footer>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

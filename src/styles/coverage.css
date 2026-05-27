@@ -1,0 +1,99 @@
+/* ── DETAIL CARD ── */
+.cov-detail {
+  background: var(--blue-lt); border: 1px solid var(--bdr);
+  border-radius: 5px; padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.cov-detail-inner { display: flex; flex-direction: column; gap: 6px; }
+.cov-row { display: flex; flex-direction: column; gap: 1px; }
+.cov-lbl { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--mid); }
+.cov-val { font-size: 12px; color: #222; line-height: 1.4; }
+.cov-clear-btn {
+  align-self: flex-start; background: none; border: 1px solid var(--bdr);
+  border-radius: 3px; font-size: 11px; color: var(--mid); padding: 3px 8px;
+  cursor: pointer; font-family: var(--font); transition: background .15s, color .15s; margin-top: 2px;
+}
+.cov-clear-btn:hover { background: #fff; color: #c0392b; border-color: #c0392b; }
+
+/* ── AGE LEGEND (on-map) ── */
+.cov-age-grad {
+  height: 14px; border-radius: 3px;
+  background: linear-gradient(to right, #af8dc3, #f7f7f7, #7fbf7b);
+  border: 1px solid var(--bdr);
+}
+
+/* ── YEAR RANGE SLIDER ── */
+.yr-range-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 7px;
+}
+.yr-range-hd .sec-lbl { margin-bottom: 0; }
+
+.yr-reset-btn {
+  background: none; border: 1px solid var(--bdr);
+  border-radius: 3px; font-size: 11px; color: var(--mid); padding: 2px 7px;
+  cursor: pointer; font-family: var(--font); transition: background .15s, color .15s;
+}
+.yr-reset-btn:hover { background: #fff; color: var(--navy); border-color: var(--navy); }
+
+.yr-wrap {
+  display: flex; align-items: flex-start; gap: 6px;
+  user-select: none;
+}
+
+.yr-labels { display: flex; flex-direction: column; flex-shrink: 0; }
+
+.yr-lbl {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 4px; font-size: 11px; font-weight: 500;
+  color: var(--bdr); transition: color .12s; white-space: nowrap;
+}
+.yr-lbl.yr-active { color: var(--navy); }
+
+.yr-track-col { position: relative; flex-shrink: 0; width: 20px; }
+
+.yr-track {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 4px; background: var(--bdr); border-radius: 2px;
+}
+
+.yr-fill {
+  position: absolute; width: 100%;
+  background: var(--blue); border-radius: 2px;
+  cursor: grab;
+}
+.yr-fill.yr-dragging { cursor: grabbing; }
+
+.yr-handle {
+  position: absolute; left: 50%; transform: translate(-50%, -50%);
+  width: 14px; height: 14px; border-radius: 50%;
+  background: #fff; border: 2.5px solid var(--blue);
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+  cursor: grab; touch-action: none; z-index: 1;
+  transition: box-shadow .12s;
+}
+.yr-handle:hover { box-shadow: 0 1px 7px rgba(0,100,200,.35); }
+.yr-handle:active, .yr-handle.yr-dragging { cursor: grabbing; background: var(--blue-lt); }
+
+.yr-chart { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+.yr-bar-row { display: flex; align-items: center; gap: 5px; }
+
+.yr-bar-track {
+  flex: 1; border-radius: 2px; overflow: hidden;
+  background: rgba(0,0,0,0.06); position: relative;
+}
+
+.yr-bar-fill {
+  position: absolute; inset: 0 auto 0 0;
+  background: var(--bdr); border-radius: 2px;
+  transition: background .15s;
+}
+.yr-bar-fill.yr-active { background: var(--blue); }
+
+.yr-bar-cnt {
+  flex-shrink: 0; font-size: 10px; font-weight: 500;
+  color: var(--bdr); min-width: 18px; text-align: right;
+  transition: color .12s;
+}
+.yr-bar-cnt.yr-active { color: var(--navy); font-weight: 600; }

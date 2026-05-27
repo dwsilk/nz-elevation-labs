@@ -1,0 +1,42 @@
+export const API = 'c01kqdevxwya5r94ycabsfw4snt';
+
+export const ELEV_URL = `https://basemaps.linz.govt.nz/v1/tiles/elevation/WebMercatorQuad/{z}/{x}/{y}.png?api=${API}&pipeline=terrain-rgb`;
+export const DSM_URL  = `https://basemaps.linz.govt.nz/v1/tiles/elevation-dsm/WebMercatorQuad/{z}/{x}/{y}.png?api=${API}&pipeline=terrain-rgb`;
+
+export type DemDsm = 'dem' | 'dsm';
+export type HsMethod = 'standard' | 'basic' | 'igor' | 'combined' | 'multidirectional';
+export type HsRaster = 'standard' | 'igor';
+export type HsSource = `terrain:${HsMethod}` | `raster:${HsRaster}`;
+
+export const HS_URLS: Record<HsRaster, Record<DemDsm, string>> = {
+  standard: {
+    dem: `https://basemaps.linz.govt.nz/v1/tiles/hillshade/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}`,
+    dsm: `https://basemaps.linz.govt.nz/v1/tiles/hillshade-dsm/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}`,
+  },
+  igor: {
+    dem: `https://basemaps.linz.govt.nz/v1/tiles/hillshade-igor/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}`,
+    dsm: `https://basemaps.linz.govt.nz/v1/tiles/hillshade-igor-dsm/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}`,
+  },
+};
+
+export const AERIAL_URL = `https://basemaps.linz.govt.nz/v1/tiles/aerial/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}`;
+
+export const COV_GEOJSONS: Record<DemDsm, string> = {
+  dem: 'https://nz-elevation.s3-ap-southeast-2.amazonaws.com/new-zealand/new-zealand/dem_1m/2193/capture-dates.geojson',
+  dsm: 'https://nz-elevation.s3-ap-southeast-2.amazonaws.com/new-zealand/new-zealand/dsm_1m/2193/capture-dates.geojson',
+};
+
+export const COV_SOURCE  = 'coverage'       as const;
+export const COV_FILL    = 'coverage-fill'   as const;
+export const COV_HOVER   = 'coverage-hover'  as const;
+export const COV_OUTLINE = 'coverage-outline' as const;
+export const COV_LABELS  = 'coverage-labels' as const;
+export const COV_LAYERS  = [COV_FILL, COV_HOVER, COV_OUTLINE, COV_LABELS] as const;
+
+export const COV_HIDDEN_LAYERS = [
+  'color-relief', 'hillshade',
+  'contour-lines-minor', 'contour-lines-major', 'contour-labels',
+] as const;
+
+export const MAP_CENTER: [number, number] = [172.0, -42.0];
+export const MAP_ZOOM = 5;
