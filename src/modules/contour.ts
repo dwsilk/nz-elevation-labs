@@ -183,7 +183,7 @@ export function addContourLayers(): void {
     filter: ['all', ['==', ['get', 'level'], 1], ['!=', ['get', 'ele'], 0]],
     layout: {
       'symbol-placement': cfg.placement,
-      'text-field': ['concat', ['number-format', ['get', 'ele'], {}], 'm'],
+      'text-field': ['concat', ['to-string', ['get', 'ele']], 'm'],
       'text-font': [cfg.font],
       'text-size': cfg.textSize,
       'text-allow-overlap': false,
