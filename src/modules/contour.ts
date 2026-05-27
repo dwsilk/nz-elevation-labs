@@ -88,6 +88,7 @@ export const CT_PRESETS: Record<string, ContourPreset> = {
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
 export let ctThresholds: ThresholdMap = { ...DEFAULT_THRESHOLDS };
+export let activeCtPreset = 'standard';
 
 let ctLayers: string[] = [];
 let demSource: InstanceType<typeof mlcontour.DemSource> | null = null;
@@ -281,6 +282,7 @@ export function renderThresholds(): void {
 export function applyCtPreset(name: string): void {
   const p = CT_PRESETS[name];
   if (!p) return;
+  activeCtPreset = name;
   ctThresholds = { ...p.thresholds };
 
   const { config: c } = p;

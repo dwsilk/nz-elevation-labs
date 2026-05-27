@@ -16,7 +16,7 @@ import {
 } from './modules/elevation.js';
 import {
   initContourControls, addContourLayers, removeContourLayers, renderThresholds,
-  setActiveSrc as setContourSrc,
+  applyCtPreset, activeCtPreset, setActiveSrc as setContourSrc,
 } from './modules/contour.js';
 import {
   loadCoverage, prefetchCoverage, initCoverageControls, showCoverageLayers, hideCoverageLayers, switchCoverageSrc,
@@ -33,6 +33,75 @@ function el<T extends HTMLElement>(id: string): T {
   const e = document.getElementById(id);
   if (!e) throw new Error(`Element #${id} not found`);
   return e as T;
+}
+
+// ── URL HASH STATE ────────────────────────────────────────────────────────────
+// View state lives in the URL hash as `&`-separated key/value pairs alongside
+// MapLibre's own `map=` camera key. A bare key (no `=`) is a present/absent flag
+// (used for `terrain`). We write with replaceState so we never fight MapLibre's
+// camera writer or spam browser history.
+
+function readHash(): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const part of window.location.hash.replace(/^#/, '').split('&')) {
+    if (!part) continue;
+    const [k, v] = part.split('=');
+    if (k) out[k] = v ?? '';
+  }
+  return out;
+}
+
+function setHashParam(key: string, value: string | null): void {
+  const params = readHash();
+  if (value === null) delete params[key];
+  else params[key] = value;
+  const parts = Object.entries(params).map(([k, v]) => (v === '' ? k : `${k}=${v}`));
+  const newHash = parts.length ? `#${parts.join('&')}` : '';
+  window.history.replaceState(window.history.state, '', window.location.href.replace(/(#.*)?$/, newHash));
+}
+
+// Preset identifiers in the hash are human-readable and mode-specific:
+// elevation → ramp name slug (e.g. `cividis`), hillshade → `dynamic.<m>` /
+// `raster.<m>`, contour → preset name. Coverage has no preset (key omitted).
+function slugify(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+}
+
+function rampSlug(i: number): string | null {
+  const p = PRESETS[i];
+  return p ? slugify(p.name) : null;
+}
+
+function rampIndexFromSlug(slug: string): number {
+  return PRESETS.findIndex(p => slugify(p.name) === slug);
+}
+
+// `terrain:igor` <-> `dynamic.igor`, `raster:igor` <-> `raster.igor`.
+function hsToken(src: HsSource): string {
+  return src.startsWith('terrain:') ? `dynamic.${src.slice(8)}` : `raster.${src.slice(7)}`;
+}
+
+function tokenToHs(token: string): HsSource | null {
+  const dot = token.indexOf('.');
+  if (dot < 0) return null;
+  const kind = token.slice(0, dot), method = token.slice(dot + 1);
+  const src = kind === 'dynamic' ? `terrain:${method}` : kind === 'raster' ? `raster:${method}` : null;
+  return src && (HS_SOURCES as string[]).includes(src) ? (src as HsSource) : null;
+}
+
+// Contour's internal `topo50` key surfaces in the URL as the visible label.
+function ctToken(name: string): string { return name === 'topo50' ? 'topographic' : name; }
+function ctFromToken(token: string): string { return token === 'topographic' ? 'topo50' : token; }
+
+function currentPreset(): string | null {
+  if (activeTab === 'elevation') return rampSlug(activePreset);
+  if (activeTab === 'hillshade') return hsToken(hsSource);
+  if (activeTab === 'contour') return ctToken(activeCtPreset);
+  return null;
+}
+
+function syncPresetHash(): void {
+  setHashParam('preset', currentPreset());
 }
 
 // ── MAP INIT ─────────────────────────────────────────────────────────────────
@@ -110,6 +179,9 @@ const map = new MaplibreMap({
   minZoom: 3,
   fadeDuration: 0,
   scrollZoom: true,
+  // Sync camera (zoom/lat/lng/bearing/pitch) to the URL hash as `#map=...`.
+  // The string form preserves our own `&mode=…&dataset=…&terrain` keys.
+  hash: 'map',
 });
 
 // ── MAP CONTROLS ──────────────────────────────────────────────────────────────
@@ -144,6 +216,7 @@ map.on('load', () => {
   initCoverageControls(map);
   init3DButton(map);
   prefetchCoverage();
+  restoreFromHash();
 });
 
 // ── ELEVATION RAMP ────────────────────────────────────────────────────────────
@@ -162,6 +235,15 @@ function drawRamp(ss: ColourStop[]): void {
   el('ramp-lbl-hi').textContent = sorted[sorted.length - 1]!.e + ' m';
 }
 
+function applyElevationPreset(i: number): void {
+  const p = PRESETS[i];
+  if (!p) return;
+  setActivePreset(i);
+  setStops(p.stops.map(s => ({ ...s })));
+  renderPresets(); renderStops(); applyRamp(); renderRampMarkers();
+  syncPresetHash();
+}
+
 function renderPresets(): void {
   const container = el('presets');
   container.innerHTML = '';
@@ -174,11 +256,7 @@ function renderPresets(): void {
     paintCanvas(sw, p.stops);
     const lbl = Object.assign(document.createElement('span'), { className: 'pre-lbl', textContent: p.name });
     btn.append(sw, lbl);
-    btn.addEventListener('click', () => {
-      setActivePreset(i);
-      setStops(p.stops.map(s => ({ ...s })));
-      renderPresets(); renderStops(); applyRamp(); renderRampMarkers();
-    });
+    btn.addEventListener('click', () => applyElevationPreset(i));
     container.appendChild(btn);
   });
 }
@@ -340,13 +418,23 @@ function applyHsPreset(src: HsSource): void {
     map.setPaintProperty('hillshade', 'hillshade-exaggeration', 0);
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
   }
+  syncPresetHash();
 }
 
-(['terrain:standard', 'terrain:basic', 'terrain:igor', 'terrain:combined', 'terrain:multidirectional',
-  'raster:standard', 'raster:igor'] as HsSource[]).forEach(src => {
+const HS_SOURCES: HsSource[] = ['terrain:standard', 'terrain:basic', 'terrain:igor', 'terrain:combined',
+  'terrain:multidirectional', 'raster:standard', 'raster:igor'];
+
+HS_SOURCES.forEach(src => {
   const [type, method] = src.split(':') as [string, string];
   document.getElementById(`hs-pre-${type}-${method}`)
     ?.addEventListener('click', () => applyHsPreset(src));
+});
+
+// Mirror contour preset selection into the hash (the contour module owns the
+// actual apply via its own button listeners).
+(['standard', 'topo50', 'white', 'cyan'] as const).forEach(name => {
+  document.getElementById(`ct-pre-${name}`)
+    ?.addEventListener('click', () => { if (activeTab === 'contour') setHashParam('preset', ctToken(name)); });
 });
 
 el<HTMLInputElement>('tog-elev-hs').addEventListener('change', e => {
@@ -427,24 +515,26 @@ el<HTMLInputElement>('sl-op').addEventListener('input', e => {
 // ── 3D TERRAIN ────────────────────────────────────────────────────────────────
 
 let is3D = false;
+// Assigned by init3DButton; lets restoreFromHash toggle 3D without a click.
+let set3D: (on: boolean, animateCamera?: boolean) => void = () => {};
 
 function init3DButton(map: MaplibreMap): void {
   const btn3d    = el<HTMLButtonElement>('btn-3d');
   const exagSl   = el<HTMLInputElement>('sl-exag');
   const exagWrap = el('exag-wrap');
 
-  btn3d.addEventListener('click', () => {
-    is3D = !is3D;
-    if (is3D) {
+  set3D = (on: boolean, animateCamera = true): void => {
+    is3D = on;
+    if (on) {
       map.setTerrain({ source: 'dem', exaggeration: Number(exagSl.value) });
-      map.easeTo({ pitch: 60, duration: 800 });
+      if (animateCamera) map.easeTo({ pitch: 60, duration: 800 });
       btn3d.textContent = '3D';
       btn3d.classList.add('active');
       btn3d.setAttribute('aria-pressed', 'true');
       exagWrap.classList.remove('hidden');
     } else {
       map.setTerrain(null);
-      map.easeTo({ pitch: 0, duration: 800 });
+      if (animateCamera) map.easeTo({ pitch: 0, duration: 800 });
       btn3d.textContent = '2D';
       btn3d.classList.remove('active');
       btn3d.setAttribute('aria-pressed', 'false');
@@ -452,7 +542,10 @@ function init3DButton(map: MaplibreMap): void {
       exagSl.value = '1';
       el('sl-exag-v').textContent = '1.0x';
     }
-  });
+    setHashParam('terrain', on ? '' : null);
+  };
+
+  btn3d.addEventListener('click', () => set3D(!is3D));
 
   exagSl.addEventListener('input', e => {
     const v = Number((e.target as HTMLInputElement).value);
@@ -492,6 +585,7 @@ function switchSource(src: DemDsm): void {
   el<HTMLButtonElement>('btn-dem').classList.toggle('active', src === 'dem');
   el<HTMLButtonElement>('btn-dsm').classList.toggle('active', src === 'dsm');
   switchCoverageSrc(src, map, activeTab === 'coverage');
+  setHashParam('dataset', src === 'dsm' ? 'dsm' : null);
 }
 
 el<HTMLButtonElement>('btn-dem').addEventListener('click', () => switchSource('dem'));
@@ -658,31 +752,54 @@ el<HTMLSelectElement>('sel-ct-backdrop').addEventListener('change', e => {
   if (activeTab === 'contour') applyContourBackdrop(bd);
 });
 
+function switchTab(next: TabName): void {
+  const prev = activeTab;
+  if (prev === next) return;
+
+  document.querySelectorAll<HTMLElement>('.pan-tab').forEach(t => t.classList.toggle('active', t.dataset['tab'] === next));
+  document.querySelectorAll('.pan-body').forEach(b => b.classList.add('hidden'));
+  document.getElementById(`tab-${next}`)?.classList.remove('hidden');
+  activeTab = next;
+  setHashParam('mode', next === 'elevation' ? null : next);
+  syncPresetHash();
+
+  const enter = (): void => {
+    if (prev === 'coverage') leaveCoverageMode();
+    if (prev === 'contour') removeContourLayers();
+
+    if (next === 'elevation') enterElevationMode();
+    else if (next === 'hillshade') enterHillshadeMode();
+    else if (next === 'contour') enterContourMode();
+    else if (next === 'coverage') { enterCoverageMode(); loadCoverage(map); }
+  };
+  if (map.loaded()) enter();
+  else map.once('load', enter);
+}
+
 document.querySelectorAll<HTMLButtonElement>('.pan-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const prev = activeTab;
-    const next = tab.dataset['tab'] as TabName;
-    if (prev === next) return;
-
-    document.querySelectorAll('.pan-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.pan-body').forEach(b => b.classList.add('hidden'));
-    tab.classList.add('active');
-    document.getElementById(`tab-${next}`)?.classList.remove('hidden');
-    activeTab = next;
-
-    const enter = (): void => {
-      if (prev === 'coverage') leaveCoverageMode();
-      if (prev === 'contour') removeContourLayers();
-
-      if (next === 'elevation') enterElevationMode();
-      else if (next === 'hillshade') enterHillshadeMode();
-      else if (next === 'contour') enterContourMode();
-      else if (next === 'coverage') { enterCoverageMode(); loadCoverage(map); }
-    };
-    if (map.loaded()) enter();
-    else map.once('load', enter);
-  });
+  tab.addEventListener('click', () => switchTab(tab.dataset['tab'] as TabName));
 });
+
+// Apply view state encoded in the URL hash. Camera is restored automatically by
+// MapLibre's `hash: 'map'`; here we apply dataset, then mode (so the rebuilt base
+// uses the right source), then terrain (without animating the restored camera).
+function restoreFromHash(): void {
+  const p = readHash();
+  if (p['dataset'] === 'dsm') switchSource('dsm');
+  const mode = p['mode'];
+  if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage') switchTab(mode);
+
+  const preset = p['preset'];
+  if (preset) {
+    if (activeTab === 'elevation') { const i = rampIndexFromSlug(preset); if (i >= 0) applyElevationPreset(i); }
+    else if (activeTab === 'hillshade') { const src = tokenToHs(preset); if (src) applyHsPreset(src); }
+    else if (activeTab === 'contour') applyCtPreset(ctFromToken(preset));
+  }
+  // Reconcile the hash with the final applied state (applyCtPreset doesn't write it).
+  syncPresetHash();
+
+  if ('terrain' in p) set3D(true, false);
+}
 
 // ── PANEL TOGGLE ─────────────────────────────────────────────────────────────
 
