@@ -41,6 +41,7 @@ const map = new MaplibreMap({
   container: 'map',
   style: {
     version: 8,
+    transition: { duration: 0, delay: 0 },
     glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
     sources: {
       dem: {
@@ -95,8 +96,7 @@ const map = new MaplibreMap({
       },
       {
         id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
-        layout: { visibility: 'none' },
-        paint: { 'raster-opacity': 1.0 },
+        paint: { 'raster-opacity': 0.0 },
       },
       {
         id: 'aerial-layer', type: 'raster', source: 'aerial',
@@ -149,7 +149,9 @@ map.on('load', () => {
 // ── ELEVATION RAMP ────────────────────────────────────────────────────────────
 
 function applyRamp(): void {
-  map.setPaintProperty('color-relief', 'color-relief-color', buildColorExpr(stops));
+  if (map.getLayer('color-relief')) {
+    map.setPaintProperty('color-relief', 'color-relief-color', buildColorExpr(stops));
+  }
   drawRamp(stops);
 }
 
@@ -332,13 +334,11 @@ function applyHsPreset(src: HsSource): void {
   if (type === 'terrain') {
     map.setPaintProperty('hillshade', 'hillshade-method', method as HsMethod);
     map.setPaintProperty('hillshade', 'hillshade-exaggeration', terrainExag);
-    map.setLayoutProperty('hillshade', 'visibility', 'visible');
-    map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'none');
+    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 0);
   } else {
     (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS[method as HsRaster][activeSrc]]);
+    map.setPaintProperty('hillshade', 'hillshade-exaggeration', 0);
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
-    map.setLayoutProperty('hillshade', 'visibility', 'none');
-    map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'visible');
   }
 }
 
@@ -352,7 +352,7 @@ function applyHsPreset(src: HsSource): void {
 el<HTMLInputElement>('tog-elev-hs').addEventListener('change', e => {
   elevHsEnabled = (e.target as HTMLInputElement).checked;
   if (activeTab === 'elevation') {
-    map.setLayoutProperty('hillshade', 'visibility', elevHsEnabled ? 'visible' : 'none');
+    map.setPaintProperty('hillshade', 'hillshade-exaggeration', elevHsEnabled ? 0.5 : 0);
   }
 });
 
@@ -419,8 +419,9 @@ el<HTMLInputElement>('sl-hs').addEventListener('input', e => {
 el<HTMLInputElement>('sl-op').addEventListener('input', e => {
   const v = Number((e.target as HTMLInputElement).value);
   el('sl-op-v').textContent = v + '%';
-  map.setLayoutProperty('color-relief', 'visibility', v === 0 ? 'none' : 'visible');
-  if (v > 0) map.setPaintProperty('color-relief', 'color-relief-opacity', v / 100);
+  if (map.getLayer('color-relief')) {
+    map.setPaintProperty('color-relief', 'color-relief-opacity', v / 100);
+  }
 });
 
 // ── 3D TERRAIN ────────────────────────────────────────────────────────────────
@@ -474,14 +475,18 @@ function switchSource(src: DemDsm): void {
   activeSrc = src;
   setContourSrc(src);
   const url = src === 'dsm' ? DSM_URL : ELEV_URL;
-  (map.getSource('dem') as RasterTileSource).setTiles([url]);
-  (map.getSource('dem-hillshade') as RasterTileSource).setTiles([url]);
-  (map.getSource('dem-relief') as RasterTileSource).setTiles([url]);
+  const setTiles = (id: string, tiles: string[]): void => {
+    const s = map.getSource(id) as RasterTileSource | undefined;
+    if (s) s.setTiles(tiles);
+  };
+  setTiles('dem', [url]);
+  setTiles('dem-hillshade', [url]);
+  setTiles('dem-relief', [url]);
   if (activeTab === 'coverage') {
-    (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS.igor[src]]);
+    setTiles('hillshade-raster', [HS_URLS.igor[src]]);
   } else if (activeTab === 'hillshade' && hsSource.startsWith('raster:')) {
     const method = hsSource.split(':')[1] as HsRaster;
-    (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS[method][src]]);
+    setTiles('hillshade-raster', [HS_URLS[method][src]]);
   }
   el('dsm-desc').textContent = DESCRIPTIONS[src];
   el<HTMLButtonElement>('btn-dem').classList.toggle('active', src === 'dem');
@@ -497,22 +502,115 @@ el<HTMLButtonElement>('btn-dsm').addEventListener('click', () => switchSource('d
 type TabName = 'elevation' | 'contour' | 'hillshade' | 'coverage';
 let activeTab: TabName = 'elevation';
 
+// ── BASE LAYER REBUILD ────────────────────────────────────────────────────────
+// Each tab owns a fresh set of base raster/DEM sources + layers. Switching tabs
+// tears the base down completely (removeSource destroys the tile manager) and
+// rebuilds it, so no stale tile/render state can leak between tabs. The `dem`
+// source (3D terrain) and the contour/coverage overlay layers are left untouched.
+
+const ATTR = '© Land Information New Zealand CC BY 4.0';
+const BASE_LAYER_IDS = ['color-relief', 'hillshade', 'hillshade-raster-layer', 'aerial-layer'];
+const BASE_SOURCE_IDS = ['dem-hillshade', 'dem-relief', 'hillshade-raster', 'aerial'];
+
+function teardownBase(): void {
+  for (const id of BASE_LAYER_IDS) if (map.getLayer(id)) map.removeLayer(id);
+  for (const id of BASE_SOURCE_IDS) if (map.getSource(id)) map.removeSource(id);
+}
+
+// The lowest layer that is neither the background nor a base layer — i.e. the
+// first overlay (contour/coverage). Base layers are inserted before it so they
+// always render beneath the overlays.
+function firstOverlayLayerId(): string | undefined {
+  for (const l of map.getStyle().layers) {
+    if (l.id === 'bg' || BASE_LAYER_IDS.includes(l.id)) continue;
+    return l.id;
+  }
+  return undefined;
+}
+
+function addBaseLayer(layer: Parameters<typeof map.addLayer>[0]): void {
+  map.addLayer(layer, firstOverlayLayerId());
+}
+
+type SourceSpec = Parameters<typeof map.addSource>[1];
+
+function demSpec(): SourceSpec {
+  return { type: 'raster-dem', tiles: [activeSrc === 'dsm' ? DSM_URL : ELEV_URL], tileSize: 256, encoding: 'mapbox', attribution: ATTR } as SourceSpec;
+}
+function rasterSpec(url: string): SourceSpec {
+  return { type: 'raster', tiles: [url], tileSize: 256, attribution: ATTR } as SourceSpec;
+}
+
+function hillshadePaint(method: HsMethod, exaggeration: number): Record<string, unknown> {
+  return {
+    'hillshade-method': method,
+    'hillshade-illumination-direction': Number(el<HTMLInputElement>('sl-hs-dir').value),
+    'hillshade-illumination-anchor': el<HTMLButtonElement>('btn-hs-viewport').classList.contains('active') ? 'viewport' : 'map',
+    'hillshade-exaggeration': exaggeration,
+    'hillshade-shadow-color': hexToRgba(el<HTMLInputElement>('hs-shadow-color').value, Number(el<HTMLInputElement>('sl-hs-shadow-op').value)),
+    'hillshade-highlight-color': hexToRgba(el<HTMLInputElement>('hs-highlight-color').value, Number(el<HTMLInputElement>('sl-hs-highlight-op').value)),
+    'hillshade-accent-color': el<HTMLInputElement>('hs-accent-color').value,
+  };
+}
+
+function buildElevationBase(): void {
+  map.addSource('dem-relief', demSpec());
+  map.addSource('dem-hillshade', demSpec());
+  const opPct = Number(el<HTMLInputElement>('sl-op').value);
+  addBaseLayer({
+    id: 'color-relief', type: 'color-relief', source: 'dem-relief',
+    paint: { 'color-relief-color': buildColorExpr(stops), 'color-relief-opacity': opPct / 100 },
+  } as Parameters<typeof map.addLayer>[0]);
+  addBaseLayer({
+    id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
+    paint: hillshadePaint('igor', elevHsEnabled ? 0.5 : 0),
+  } as Parameters<typeof map.addLayer>[0]);
+}
+
+function buildHillshadeBase(): void {
+  map.addSource('dem-hillshade', demSpec());
+  map.addSource('hillshade-raster', rasterSpec(HS_URLS.standard[activeSrc]));
+  addBaseLayer({
+    id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
+    paint: hillshadePaint('igor', 0),
+  } as Parameters<typeof map.addLayer>[0]);
+  addBaseLayer({
+    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+    paint: { 'raster-opacity': 0 },
+  } as Parameters<typeof map.addLayer>[0]);
+}
+
+function buildContourBase(): void {
+  map.addSource('hillshade-raster', rasterSpec(HS_URLS.igor[activeSrc]));
+  map.addSource('aerial', rasterSpec(AERIAL_URL));
+  addBaseLayer({
+    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+    paint: { 'raster-opacity': 1 },
+  } as Parameters<typeof map.addLayer>[0]);
+  addBaseLayer({
+    id: 'aerial-layer', type: 'raster', source: 'aerial',
+    layout: { visibility: 'none' },
+  } as Parameters<typeof map.addLayer>[0]);
+}
+
+function buildCoverageBase(): void {
+  map.addSource('hillshade-raster', rasterSpec(HS_URLS.igor[activeSrc]));
+  addBaseLayer({
+    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+    paint: { 'raster-opacity': 1 },
+  } as Parameters<typeof map.addLayer>[0]);
+}
+
 function enterElevationMode(): void {
-  map.setLayoutProperty('color-relief', 'visibility', 'visible');
-  map.setPaintProperty('hillshade', 'hillshade-method', 'igor');
-  map.setLayoutProperty('hillshade', 'visibility', elevHsEnabled ? 'visible' : 'none');
-  map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'none');
-  map.setLayoutProperty('aerial-layer', 'visibility', 'none');
+  teardownBase();
+  buildElevationBase();
 }
 
 // ── COVERAGE MODE ─────────────────────────────────────────────────────────────
 
 function enterCoverageMode(): void {
-  map.setLayoutProperty('color-relief', 'visibility', 'none');
-  (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS.igor[activeSrc]]);
-  map.setLayoutProperty('hillshade', 'visibility', 'none');
-  map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'visible');
-  map.setLayoutProperty('aerial-layer', 'visibility', 'none');
+  teardownBase();
+  buildCoverageBase();
   showCoverageLayers(map);
 }
 
@@ -528,28 +626,28 @@ let contourBackdrop: ContourBackdrop = 'igor-dem';
 function applyContourBackdrop(bd: ContourBackdrop): void {
   contourBackdrop = bd;
   if (bd === 'aerial') {
-    map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'none');
+    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 0);
     map.setLayoutProperty('aerial-layer', 'visibility', 'visible');
   } else {
     (map.getSource('hillshade-raster') as RasterTileSource)
       .setTiles([HS_URLS.igor[bd === 'igor-dsm' ? 'dsm' : 'dem']]);
-    map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'visible');
+    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
     map.setLayoutProperty('aerial-layer', 'visibility', 'none');
   }
 }
 
 function enterContourMode(): void {
-  addContourLayers();
-  map.setLayoutProperty('color-relief', 'visibility', 'none');
-  map.setLayoutProperty('hillshade', 'visibility', 'none');
+  teardownBase();
+  buildContourBase();
   applyContourBackdrop(contourBackdrop);
+  addContourLayers();
 }
 
 let hsPreviewed = false;
 
 function enterHillshadeMode(): void {
-  map.setLayoutProperty('color-relief', 'visibility', 'none');
-  map.setLayoutProperty('aerial-layer', 'visibility', 'none');
+  teardownBase();
+  buildHillshadeBase();
   applyHsPreset(hsSource);
   if (!hsPreviewed) { hsPreviewed = true; initTerrainPreviews().catch(console.warn); }
 }
@@ -572,26 +670,17 @@ document.querySelectorAll<HTMLButtonElement>('.pan-tab').forEach(tab => {
     document.getElementById(`tab-${next}`)?.classList.remove('hidden');
     activeTab = next;
 
-    if (prev === 'coverage') leaveCoverageMode();
-    if (prev === 'contour') removeContourLayers();
+    const enter = (): void => {
+      if (prev === 'coverage') leaveCoverageMode();
+      if (prev === 'contour') removeContourLayers();
 
-    if (next === 'elevation') {
-      if (map.loaded()) enterElevationMode();
-      else map.once('load', () => enterElevationMode());
-    }
-    if (next === 'coverage') {
-      if (map.loaded()) loadCoverage(map);
-      else map.once('load', () => loadCoverage(map));
-      enterCoverageMode();
-    }
-    if (next === 'contour') {
-      if (map.loaded()) enterContourMode();
-      else map.once('load', () => enterContourMode());
-    }
-    if (next === 'hillshade') {
-      if (map.loaded()) enterHillshadeMode();
-      else map.once('load', () => enterHillshadeMode());
-    }
+      if (next === 'elevation') enterElevationMode();
+      else if (next === 'hillshade') enterHillshadeMode();
+      else if (next === 'contour') enterContourMode();
+      else if (next === 'coverage') { enterCoverageMode(); loadCoverage(map); }
+    };
+    if (map.loaded()) enter();
+    else map.once('load', enter);
   });
 });
 
