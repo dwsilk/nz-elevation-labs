@@ -33,10 +33,5 @@ export const COV_OUTLINE = 'coverage-outline' as const;
 export const COV_LABELS  = 'coverage-labels' as const;
 export const COV_LAYERS  = [COV_FILL, COV_HOVER, COV_OUTLINE, COV_LABELS] as const;
 
-export const COV_HIDDEN_LAYERS = [
-  'color-relief', 'hillshade',
-  'contour-lines-minor', 'contour-lines-major', 'contour-labels',
-] as const;
-
 export const MAP_CENTER: [number, number] = [172.0, -42.0];
 export const MAP_ZOOM = 5;

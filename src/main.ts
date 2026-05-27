@@ -6,7 +6,7 @@
 import maplibregl, { Map as MaplibreMap, NavigationControl, ScaleControl, RasterTileSource } from 'maplibre-gl';
 import {
   API, ELEV_URL, DSM_URL, HS_URLS, AERIAL_URL,
-  COV_HIDDEN_LAYERS, MAP_CENTER, MAP_ZOOM,
+  MAP_CENTER, MAP_ZOOM,
   type DemDsm, type HsSource, type HsRaster, type HsMethod,
 } from './modules/config.js';
 import {
@@ -15,12 +15,13 @@ import {
   type ColourStop,
 } from './modules/elevation.js';
 import {
-  initContourControls, addContourLayers, renderThresholds,
+  initContourControls, addContourLayers, removeContourLayers, renderThresholds,
   setActiveSrc as setContourSrc,
 } from './modules/contour.js';
 import {
-  loadCoverage, initCoverageControls, showCoverageLayers, hideCoverageLayers, switchCoverageSrc,
+  loadCoverage, prefetchCoverage, initCoverageControls, showCoverageLayers, hideCoverageLayers, switchCoverageSrc,
 } from './modules/coverage.js';
+import { initTerrainPreviews } from './modules/hs-thumbs.js';
 
 import './styles/main.css';
 import './styles/panel.css';
@@ -49,6 +50,20 @@ const map = new MaplibreMap({
         encoding: 'mapbox',
         attribution: '© Land Information New Zealand CC BY 4.0',
       },
+      'dem-hillshade': {
+        type: 'raster-dem',
+        tiles: [ELEV_URL],
+        tileSize: 256,
+        encoding: 'mapbox',
+        attribution: '© Land Information New Zealand CC BY 4.0',
+      },
+      'dem-relief': {
+        type: 'raster-dem',
+        tiles: [ELEV_URL],
+        tileSize: 256,
+        encoding: 'mapbox',
+        attribution: '© Land Information New Zealand CC BY 4.0',
+      },
       'hillshade-raster': {
         type: 'raster',
         tiles: [HS_URLS.standard.dem],
@@ -65,13 +80,13 @@ const map = new MaplibreMap({
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': '#ffffff' } },
       {
-        id: 'color-relief', type: 'color-relief', source: 'dem',
+        id: 'color-relief', type: 'color-relief', source: 'dem-relief',
         paint: { 'color-relief-color': buildColorExpr(stops), 'color-relief-opacity': 1.0 },
       },
       {
-        id: 'hillshade', type: 'hillshade', source: 'dem',
+        id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
         paint: {
-          'hillshade-method': 'standard',
+          'hillshade-method': 'igor',
           'hillshade-illumination-direction': 315,
           'hillshade-exaggeration': 0.5,
           'hillshade-shadow-color': 'rgba(0,0,0,0.5)',
@@ -81,7 +96,7 @@ const map = new MaplibreMap({
       {
         id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
         layout: { visibility: 'none' },
-        paint: { 'raster-opacity': 0.5 },
+        paint: { 'raster-opacity': 1.0 },
       },
       {
         id: 'aerial-layer', type: 'raster', source: 'aerial',
@@ -138,10 +153,10 @@ map.on('load', () => {
   updateLegend(stops);
   drawRamp(stops);
   renderThresholds();
-  addContourLayers();
   initContourControls(map);
   initCoverageControls(map);
   init3DButton(map);
+  prefetchCoverage();
 });
 
 // ── ELEVATION RAMP ────────────────────────────────────────────────────────────
@@ -161,6 +176,9 @@ function updateLegend(ss: ColourStop[]): void {
 
 function drawRamp(ss: ColourStop[]): void {
   paintCanvas(el<HTMLCanvasElement>('ramp-cv'), ss);
+  const sorted = [...ss].sort((a, b) => a.e - b.e);
+  el('ramp-lbl-lo').textContent = sorted[0]!.e + ' m';
+  el('ramp-lbl-hi').textContent = sorted[sorted.length - 1]!.e + ' m';
 }
 
 function renderPresets(): void {
@@ -178,7 +196,7 @@ function renderPresets(): void {
     btn.addEventListener('click', () => {
       setActivePreset(i);
       setStops(p.stops.map(s => ({ ...s })));
-      renderPresets(); renderStops(); applyRamp();
+      renderPresets(); renderStops(); applyRamp(); renderRampMarkers();
     });
     container.appendChild(btn);
   });
@@ -196,7 +214,7 @@ function renderStops(): void {
     ci.setAttribute('aria-label', `Stop ${i + 1} colour`);
     ci.addEventListener('input', () => {
       stops[stops.findIndex(x => x.e === s.e)]!.c = ci.value;
-      drawRamp(stops); applyRamp();
+      applyRamp(); renderRampMarkers();
     });
 
     const ei = document.createElement('input');
@@ -204,7 +222,7 @@ function renderStops(): void {
     ei.setAttribute('aria-label', `Stop ${i + 1} elevation`);
     ei.addEventListener('change', () => {
       stops[stops.findIndex(x => x.e === s.e)]!.e = Number(ei.value);
-      drawRamp(stops); applyRamp();
+      applyRamp(); renderRampMarkers();
     });
 
     const unit = Object.assign(document.createElement('span'), { className: 'stop-unit', textContent: 'm' });
@@ -215,7 +233,7 @@ function renderStops(): void {
     del.addEventListener('click', () => {
       if (stops.length > 2) {
         stops.splice(stops.findIndex(x => x.e === s.e), 1);
-        renderStops(); drawRamp(stops); applyRamp();
+        renderStops(); applyRamp(); renderRampMarkers();
       }
     });
 
@@ -224,16 +242,85 @@ function renderStops(): void {
   });
 }
 
+el('ramp-bar').addEventListener('dblclick', e => {
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+  const sorted = [...stops].sort((a, b) => a.e - b.e);
+  const minE = sorted[0]!.e;
+  const maxE = sorted[sorted.length - 1]!.e;
+  const newE = Math.round(minE + pct * (maxE - minE));
+  if (stops.some(s => s.e === newE)) return;
+  stops.push({ e: newE, c: rgbToHex(colorAt(newE, stops)) });
+  renderStops(); applyRamp(); renderRampMarkers();
+});
+
 el<HTMLButtonElement>('add-stop').addEventListener('click', () => {
   const s = [...stops].sort((a, b) => a.e - b.e);
   const ne = Math.round((s[s.length - 1]!.e + s[s.length - 2]!.e) / 2);
   stops.push({ e: ne, c: rgbToHex(colorAt(ne, stops)) });
-  renderStops(); drawRamp(stops); applyRamp();
+  renderStops(); drawRamp(stops); applyRamp(); renderRampMarkers();
 });
+
+// ── RAMP HANDLES ─────────────────────────────────────────────────────────────
+
+function renderRampMarkers(): void {
+  const container = el('ramp-handles');
+  container.innerHTML = '';
+  const sorted = [...stops].sort((a, b) => a.e - b.e);
+  const minE = sorted[0]!.e;
+  const maxE = sorted[sorted.length - 1]!.e;
+  const range = maxE - minE || 1;
+
+  sorted.forEach((s, idx) => {
+    const isFixed = idx === 0 || idx === sorted.length - 1;
+    const handle = document.createElement('div');
+    handle.className = 'ramp-handle' + (isFixed ? ' is-fixed' : '');
+    handle.style.left = `${(s.e - minE) / range * 100}%`;
+    handle.style.background = s.c;
+    handle.title = `${s.e} m`;
+
+    if (!isFixed) {
+      handle.addEventListener('pointerdown', e => {
+        handle.setPointerCapture(e.pointerId);
+        e.preventDefault();
+      });
+
+      handle.addEventListener('pointermove', e => {
+        if (!handle.hasPointerCapture(e.pointerId)) return;
+        const rect = container.getBoundingClientRect();
+        const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const cur = [...stops].sort((a, b) => a.e - b.e);
+        const curMin = cur[0]!.e;
+        const curMax = cur[cur.length - 1]!.e;
+        const curRange = curMax - curMin || 1;
+        let newE = Math.round(curMin + pct * curRange);
+        const curIdx = cur.indexOf(s);
+        if (curIdx > 0) newE = Math.max(cur[curIdx - 1]!.e + 1, newE);
+        if (curIdx < cur.length - 1) newE = Math.min(cur[curIdx + 1]!.e - 1, newE);
+        s.e = newE;
+        const rowInputs = el('stop-list').querySelectorAll<HTMLInputElement>('input[type=number]');
+        if (rowInputs[curIdx]) rowInputs[curIdx]!.value = String(newE);
+        const ns = [...stops].sort((a, b) => a.e - b.e);
+        handle.style.left = `${(newE - ns[0]!.e) / (ns[ns.length - 1]!.e - ns[0]!.e || 1) * 100}%`;
+        handle.title = `${newE} m`;
+        applyRamp();
+      });
+
+      handle.addEventListener('pointerup', () => {
+        renderStops();
+        renderRampMarkers();
+      });
+    }
+
+    container.appendChild(handle);
+  });
+}
 
 // ── HILLSHADE CONTROLS ────────────────────────────────────────────────────────
 
-let hsSource: HsSource = 'terrain:standard';
+let elevHsEnabled = true;
+let hsSource: HsSource = 'terrain:igor';
+let terrainExag = 0.5; // tracks the terrain hillshade-exaggeration independently of raster opacity
 
 function hexToRgba(hex: string, pct: number): string {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -248,30 +335,46 @@ function updateHsTerrainVis(isTerrainSource: boolean): void {
   el('sl-hs-label').textContent = isTerrainSource ? 'Exaggeration' : 'Opacity';
 }
 
-el<HTMLInputElement>('tog-hs').addEventListener('change', e => {
-  const enabled = (e.target as HTMLInputElement).checked;
-  const vis = enabled ? 'visible' : 'none';
-  const [type] = hsSource.split(':') as [string];
-  map.setLayoutProperty('hillshade', 'visibility', type === 'terrain' ? vis : 'none');
-  map.setLayoutProperty('hillshade-raster-layer', 'visibility', type === 'raster' ? vis : 'none');
-});
+function syncHsSlider(type: string): void {
+  const slHs = el<HTMLInputElement>('sl-hs');
+  const val  = type === 'terrain' ? terrainExag : 1.0;
+  slHs.value = String(Math.round(val * 10));
+  el('sl-hs-v').textContent = val.toFixed(1);
+}
 
-el<HTMLSelectElement>('sel-hs-src').addEventListener('change', e => {
-  const val = (e.target as HTMLSelectElement).value as HsSource;
-  const [type, method] = val.split(':') as [string, string];
-  const vis = el<HTMLInputElement>('tog-hs').checked ? 'visible' : 'none';
-
+function applyHsPreset(src: HsSource): void {
+  hsSource = src;
+  const [type, method] = src.split(':') as [string, string];
+  updateHsTerrainVis(type === 'terrain');
+  syncHsSlider(type);
+  document.querySelectorAll('.hs-pre-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`hs-pre-${type}-${method}`)?.classList.add('active');
+  if (activeTab !== 'hillshade') return;
   if (type === 'terrain') {
     map.setPaintProperty('hillshade', 'hillshade-method', method as HsMethod);
-    map.setLayoutProperty('hillshade', 'visibility', vis);
+    map.setPaintProperty('hillshade', 'hillshade-exaggeration', terrainExag);
+    map.setLayoutProperty('hillshade', 'visibility', 'visible');
     map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'none');
   } else {
     (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS[method as HsRaster][activeSrc]]);
+    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
     map.setLayoutProperty('hillshade', 'visibility', 'none');
-    map.setLayoutProperty('hillshade-raster-layer', 'visibility', vis);
+    map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'visible');
   }
-  hsSource = val;
-  updateHsTerrainVis(type === 'terrain');
+}
+
+(['terrain:standard', 'terrain:basic', 'terrain:igor', 'terrain:combined', 'terrain:multidirectional',
+  'raster:standard', 'raster:igor'] as HsSource[]).forEach(src => {
+  const [type, method] = src.split(':') as [string, string];
+  document.getElementById(`hs-pre-${type}-${method}`)
+    ?.addEventListener('click', () => applyHsPreset(src));
+});
+
+el<HTMLInputElement>('tog-elev-hs').addEventListener('change', e => {
+  elevHsEnabled = (e.target as HTMLInputElement).checked;
+  if (activeTab === 'elevation') {
+    map.setLayoutProperty('hillshade', 'visibility', elevHsEnabled ? 'visible' : 'none');
+  }
 });
 
 el<HTMLInputElement>('sl-hs-dir').addEventListener('input', e => {
@@ -325,7 +428,8 @@ el<HTMLInputElement>('sl-hs').addEventListener('input', e => {
   el('sl-hs-v').textContent = (v / 10).toFixed(1);
   const [type] = hsSource.split(':') as [string];
   if (type === 'terrain') {
-    map.setPaintProperty('hillshade', 'hillshade-exaggeration', v / 10);
+    terrainExag = v / 10;
+    map.setPaintProperty('hillshade', 'hillshade-exaggeration', terrainExag);
   } else {
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', v / 10);
   }
@@ -390,10 +494,13 @@ function switchSource(src: DemDsm): void {
   if (src === activeSrc) return;
   activeSrc = src;
   setContourSrc(src);
-  (map.getSource('dem') as RasterTileSource).setTiles([src === 'dsm' ? DSM_URL : ELEV_URL]);
+  const url = src === 'dsm' ? DSM_URL : ELEV_URL;
+  (map.getSource('dem') as RasterTileSource).setTiles([url]);
+  (map.getSource('dem-hillshade') as RasterTileSource).setTiles([url]);
+  (map.getSource('dem-relief') as RasterTileSource).setTiles([url]);
   if (activeTab === 'coverage') {
     (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS.igor[src]]);
-  } else if (activeTab !== 'contour' && hsSource.startsWith('raster:')) {
+  } else if (activeTab === 'hillshade' && hsSource.startsWith('raster:')) {
     const method = hsSource.split(':')[1] as HsRaster;
     (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS[method][src]]);
   }
@@ -411,32 +518,18 @@ el<HTMLButtonElement>('btn-dsm').addEventListener('click', () => switchSource('d
 type TabName = 'elevation' | 'contour' | 'hillshade' | 'coverage';
 let activeTab: TabName = 'elevation';
 
-function restoreHillshade(): void {
-  const [type, method] = hsSource.split(':') as [string, string];
-  const vis = el<HTMLInputElement>('tog-hs').checked ? 'visible' : 'none';
-  if (type === 'terrain') {
-    map.setPaintProperty('hillshade', 'hillshade-method', method as HsMethod);
-    map.setLayoutProperty('hillshade', 'visibility', vis);
-    map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'none');
-  } else {
-    (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS[method as HsRaster][activeSrc]]);
-    map.setLayoutProperty('hillshade', 'visibility', 'none');
-    map.setLayoutProperty('hillshade-raster-layer', 'visibility', vis);
-  }
+function enterElevationMode(): void {
+  map.setLayoutProperty('color-relief', 'visibility', 'visible');
+  map.setPaintProperty('hillshade', 'hillshade-method', 'igor');
+  map.setLayoutProperty('hillshade', 'visibility', elevHsEnabled ? 'visible' : 'none');
+  map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'none');
   map.setLayoutProperty('aerial-layer', 'visibility', 'none');
 }
 
 // ── COVERAGE MODE ─────────────────────────────────────────────────────────────
 
-let preCoVState: Record<string, string> = {};
-
 function enterCoverageMode(): void {
-  COV_HIDDEN_LAYERS.forEach(id => {
-    if (map.getLayer(id)) {
-      preCoVState[id] = map.getLayoutProperty(id, 'visibility') as string ?? 'visible';
-      map.setLayoutProperty(id, 'visibility', 'none');
-    }
-  });
+  map.setLayoutProperty('color-relief', 'visibility', 'none');
   (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS.igor[activeSrc]]);
   map.setLayoutProperty('hillshade', 'visibility', 'none');
   map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'visible');
@@ -448,20 +541,14 @@ function enterCoverageMode(): void {
 
 function leaveCoverageMode(): void {
   hideCoverageLayers(map);
-  COV_HIDDEN_LAYERS.forEach(id => {
-    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', preCoVState[id] ?? 'visible');
-  });
-  preCoVState = {};
   el('leg-cov').classList.add('hidden');
   el('leg-elev').classList.remove('hidden');
-  restoreHillshade();
 }
 
 // ── CONTOUR MODE ──────────────────────────────────────────────────────────────
 
 type ContourBackdrop = 'igor-dem' | 'igor-dsm' | 'aerial';
 let contourBackdrop: ContourBackdrop = 'igor-dem';
-let preCtState: Record<string, string> = {};
 
 function applyContourBackdrop(bd: ContourBackdrop): void {
   contourBackdrop = bd;
@@ -477,21 +564,19 @@ function applyContourBackdrop(bd: ContourBackdrop): void {
 }
 
 function enterContourMode(): void {
-  ['color-relief', 'hillshade'].forEach(id => {
-    if (map.getLayer(id)) {
-      preCtState[id] = map.getLayoutProperty(id, 'visibility') as string ?? 'visible';
-      map.setLayoutProperty(id, 'visibility', 'none');
-    }
-  });
+  addContourLayers();
+  map.setLayoutProperty('color-relief', 'visibility', 'none');
+  map.setLayoutProperty('hillshade', 'visibility', 'none');
   applyContourBackdrop(contourBackdrop);
 }
 
-function leaveContourMode(): void {
-  ['color-relief', 'hillshade'].forEach(id => {
-    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', preCtState[id] ?? 'visible');
-  });
-  preCtState = {};
-  restoreHillshade();
+let hsPreviewed = false;
+
+function enterHillshadeMode(): void {
+  map.setLayoutProperty('color-relief', 'visibility', 'none');
+  map.setLayoutProperty('aerial-layer', 'visibility', 'none');
+  applyHsPreset(hsSource);
+  if (!hsPreviewed) { hsPreviewed = true; initTerrainPreviews().catch(console.warn); }
 }
 
 el<HTMLSelectElement>('sel-ct-backdrop').addEventListener('change', e => {
@@ -513,8 +598,12 @@ document.querySelectorAll<HTMLButtonElement>('.pan-tab').forEach(tab => {
     activeTab = next;
 
     if (prev === 'coverage') leaveCoverageMode();
-    if (prev === 'contour') leaveContourMode();
+    if (prev === 'contour') removeContourLayers();
 
+    if (next === 'elevation') {
+      if (map.loaded()) enterElevationMode();
+      else map.once('load', () => enterElevationMode());
+    }
     if (next === 'coverage') {
       if (map.loaded()) loadCoverage(map);
       else map.once('load', () => loadCoverage(map));
@@ -524,11 +613,34 @@ document.querySelectorAll<HTMLButtonElement>('.pan-tab').forEach(tab => {
       if (map.loaded()) enterContourMode();
       else map.once('load', () => enterContourMode());
     }
+    if (next === 'hillshade') {
+      if (map.loaded()) enterHillshadeMode();
+      else map.once('load', () => enterHillshadeMode());
+    }
   });
 });
+
+// ── PANEL TOGGLE ─────────────────────────────────────────────────────────────
+
+const panelEl       = el('panel');
+const mapWrapEl     = el('map-wrap');
+const panelToggleEl = el<HTMLButtonElement>('panel-toggle');
+
+function setPanelCollapsed(collapsed: boolean): void {
+  panelEl.classList.toggle('collapsed', collapsed);
+  mapWrapEl.classList.toggle('panel-hidden', collapsed);
+  panelToggleEl.setAttribute('aria-label', collapsed ? 'Show panel' : 'Hide panel');
+  panelToggleEl.setAttribute('aria-expanded', String(!collapsed));
+}
+
+panelToggleEl.addEventListener('click', () => setPanelCollapsed(!panelEl.classList.contains('collapsed')));
+panelEl.addEventListener('transitionend', () => map.resize());
+
+if (window.innerWidth < 768) setPanelCollapsed(true);
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 
 renderPresets();
 renderStops();
 drawRamp(stops);
+renderRampMarkers();

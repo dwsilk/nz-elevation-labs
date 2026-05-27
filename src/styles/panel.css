@@ -3,8 +3,24 @@
   position: fixed; top: var(--hh); bottom: var(--fh); right: 0;
   width: var(--pw); background: #fff;
   border-left: 1px solid var(--bdr);
-  display: flex; flex-direction: column; overflow: hidden; z-index: 500;
+  display: flex; flex-direction: column; overflow: visible; z-index: 500;
+  transition: transform .28s ease;
 }
+#panel.collapsed { transform: translateX(100%); }
+
+/* ── PANEL TOGGLE TAB ── */
+#panel-toggle {
+  position: absolute; top: 12px; left: -24px;
+  width: 24px; height: 40px;
+  background: #fff; border: 1px solid var(--bdr); border-right: none;
+  border-radius: 6px 0 0 6px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: var(--mid); box-shadow: -3px 0 8px rgba(0,0,0,.08);
+  transition: background .15s, color .15s;
+}
+#panel-toggle:hover { background: var(--blue-lt); color: var(--navy); }
+#panel-toggle svg { width: 14px; height: 14px; transition: transform .28s; }
+#panel.collapsed #panel-toggle svg { transform: rotate(180deg); }
 
 /* ── GLOBAL CONTROLS ── */
 #pan-global {
@@ -80,8 +96,26 @@
 .add-btn:hover { border-color: var(--blue); color: var(--blue); }
 
 /* ── RAMP PREVIEW ── */
-#ramp-wrap { border-radius: 4px; overflow: hidden; border: 1px solid var(--bdr); }
+#ramp-wrap { position: relative; }
+#ramp-bar { border: 1px solid var(--bdr); border-radius: 4px 4px 0 0; overflow: hidden; }
 #ramp-cv { height: 20px; width: 100%; display: block; }
+#ramp-handles {
+  position: relative; height: 18px;
+  background: var(--blue-lt);
+  border: 1px solid var(--bdr); border-top: none;
+  border-radius: 0 0 4px 4px; overflow: hidden;
+}
+.ramp-handle {
+  position: absolute; top: 1px;
+  width: 11px; height: 16px;
+  clip-path: polygon(50% 0%, 100% 38%, 100% 100%, 0% 100%, 0% 38%);
+  transform: translateX(-50%);
+  cursor: ew-resize; touch-action: none;
+  filter: drop-shadow(0 0 1px rgba(0,0,0,0.4));
+  transition: filter .1s;
+}
+.ramp-handle:hover:not(.is-fixed) { filter: drop-shadow(0 0 2px rgba(0,100,200,0.7)); }
+.ramp-handle.is-fixed { cursor: default; opacity: 0.5; }
 .ramp-lbls { display: flex; justify-content: space-between; font-size: 10px; color: var(--mid); margin-top: 3px; }
 
 /* ── OPTIONS ── */
@@ -144,6 +178,9 @@
 
 /* ── CONTOUR PRESET SWATCHES ── */
 .ct-pre-sw { line-height: 0; }
+
+/* ── HILLSHADE PRESET SWATCHES ── */
+.hs-pre-sw { height: 26px; }
 
 /* ── APPLY BUTTON ── */
 .apply-btn {

@@ -46,6 +46,11 @@
 </div>
 
 <aside id="panel" role="complementary" aria-label="Visualisation controls">
+  <button id="panel-toggle" aria-label="Hide panel" aria-expanded="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  </button>
   <div id="pan-global">
     <div class="sec-lbl">Dataset</div>
     <div class="dem-dsm-toggle">
@@ -84,17 +89,29 @@
     </div>
     <div>
       <div class="sec-lbl">Preview</div>
-      <div id="ramp-wrap"><canvas id="ramp-cv" width="270" height="20"></canvas></div>
-      <div class="ramp-lbls"><span>0 m</span><span>1500 m</span><span>3000 m</span></div>
+      <div id="ramp-wrap">
+        <div id="ramp-bar"><canvas id="ramp-cv" width="270" height="20"></canvas></div>
+        <div id="ramp-handles"></div>
+      </div>
+      <div class="ramp-lbls"><span id="ramp-lbl-lo">0 m</span><span id="ramp-lbl-hi">3000 m</span></div>
     </div>
     <div>
       <div class="sec-lbl">Options</div>
-      <div class="sl-wrap">
-        <div class="opt-row">
-          <label for="sl-op">Colour ramp opacity</label>
-          <span class="sl-val" id="sl-op-v">100%</span>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-op">Colour ramp opacity</label>
+            <span class="sl-val" id="sl-op-v">100%</span>
+          </div>
+          <input type="range" id="sl-op" min="0" max="100" value="100" step="1"/>
         </div>
-        <input type="range" id="sl-op" min="0" max="100" value="100" step="1"/>
+        <div class="opt-row">
+          <label for="tog-elev-hs">Igor hillshade backdrop</label>
+          <label class="tog" style="margin-left:auto;flex-shrink:0">
+            <input type="checkbox" id="tog-elev-hs" checked/>
+            <span class="tog-sl"></span>
+          </label>
+        </div>
       </div>
     </div>
     <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
@@ -288,30 +305,42 @@
   <!-- ── HILLSHADE TAB ── -->
   <div class="pan-body hidden" id="tab-hillshade">
     <div>
-      <div class="opt-row">
-        <label for="tog-hs">Enable hillshade</label>
-        <label class="tog" style="margin-left:auto;flex-shrink:0">
-          <input type="checkbox" id="tog-hs" checked/>
-          <span class="tog-sl"></span>
-        </label>
+      <div class="sec-lbl">Dynamic</div>
+      <div class="presets">
+        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-standard" title="MapLibre Standard">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#eee 0%,#777 50%,#111 100%)"></div>
+          <span class="pre-lbl">Standard</span>
+        </button>
+        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-basic" title="MapLibre Basic">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#ddd 0%,#999 50%,#303030 100%)"></div>
+          <span class="pre-lbl">Basic</span>
+        </button>
+        <button class="pre-btn hs-pre-btn active" id="hs-pre-terrain-igor" title="MapLibre Igor">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#fff 0%,#555 40%,#000 100%)"></div>
+          <span class="pre-lbl">Igor</span>
+        </button>
+        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-combined" title="MapLibre Combined">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#f8f8f8 0%,#606060 45%,#080808 100%)"></div>
+          <span class="pre-lbl">Combined</span>
+        </button>
+        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-multidirectional" title="MapLibre Multidirectional">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#d8d8d8 0%,#aaa 50%,#383838 100%)"></div>
+          <span class="pre-lbl">Multidirectional</span>
+        </button>
       </div>
     </div>
-
     <div>
-      <div class="sec-lbl">Source</div>
-      <select id="sel-hs-src" class="hs-select">
-        <optgroup label="Terrain Tile (MapLibre)">
-          <option value="terrain:standard">Standard</option>
-          <option value="terrain:basic">Basic</option>
-          <option value="terrain:igor">Igor</option>
-          <option value="terrain:combined">Combined</option>
-          <option value="terrain:multidirectional">Multidirectional</option>
-        </optgroup>
-        <optgroup label="Raster (LINZ)">
-          <option value="raster:standard">Standard Raster Hillshade</option>
-          <option value="raster:igor">Igor Raster Hillshade</option>
-        </optgroup>
-      </select>
+      <div class="sec-lbl">Pre-rendered</div>
+      <div class="presets">
+        <button class="pre-btn hs-pre-btn" id="hs-pre-raster-standard" title="LINZ Standard Raster Hillshade">
+          <div class="hs-pre-sw" style="background:url('/thumbs/hs-raster-standard.webp') center/cover"></div>
+          <span class="pre-lbl">Standard</span>
+        </button>
+        <button class="pre-btn hs-pre-btn" id="hs-pre-raster-igor" title="LINZ Igor Raster Hillshade">
+          <div class="hs-pre-sw" style="background:url('/thumbs/hs-raster-igor.webp') center/cover"></div>
+          <span class="pre-lbl">Igor</span>
+        </button>
+      </div>
     </div>
 
     <div id="hs-terrain-illumination">

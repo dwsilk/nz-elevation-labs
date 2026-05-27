@@ -33,6 +33,21 @@ interface NormalisedCaptureProperties extends RawCaptureProperties {
   age_t: number;
 }
 
+// ── FETCH CACHE ───────────────────────────────────────────────────────────────
+
+const covRawCache: Partial<Record<DemDsm, Promise<FeatureCollection<Geometry, RawCaptureProperties>>>> = {};
+
+function fetchRaw(src: DemDsm): Promise<FeatureCollection<Geometry, RawCaptureProperties>> {
+  if (!covRawCache[src]) {
+    covRawCache[src] = fetch(COV_GEOJSONS[src]).then(r => r.json() as Promise<FeatureCollection<Geometry, RawCaptureProperties>>);
+  }
+  return covRawCache[src]!;
+}
+
+export function prefetchCoverage(): void {
+  fetchRaw('dem');
+}
+
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
 let covLoaded     = false;
@@ -418,8 +433,7 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
   if (covLoaded) return;
   covLoaded = true;
 
-  fetch(COV_GEOJSONS[covActiveSrc])
-    .then(r => r.json() as Promise<FeatureCollection<Geometry, RawCaptureProperties>>)
+  fetchRaw(covActiveSrc)
     .then(geojson => {
       // Normalise + compute age_t
       const normFeatures = geojson.features.map((f, i) => {

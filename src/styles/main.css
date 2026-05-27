@@ -45,7 +45,9 @@ html, body {
 #map-wrap {
   position: fixed; top: var(--hh); bottom: var(--fh);
   left: 0; right: var(--pw);
+  transition: right .28s ease;
 }
+#map-wrap.panel-hidden { right: 0; }
 #map { width: 100%; height: 100%; }
 
 /* ── LEGEND ── */

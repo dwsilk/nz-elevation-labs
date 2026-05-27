@@ -38,7 +38,7 @@ export interface ContourPreset {
 // ── PRESETS ───────────────────────────────────────────────────────────────────
 
 const DEFAULT_THRESHOLDS: ThresholdMap = {
-  5: [500, 1000], 8: [200, 500], 10: [100, 500],
+  1: [500, 1000], 8: [200, 500], 10: [100, 500],
   11: [50, 200], 12: [20, 100], 13: [10, 50],
 };
 
@@ -125,7 +125,7 @@ function getCtConfig(): ContourConfig {
 
 // ── LAYER MANAGEMENT ──────────────────────────────────────────────────────────
 
-function removeContourLayers(): void {
+export function removeContourLayers(): void {
   if (!_map) return;
   ctLayers.forEach(id => { if (_map!.getLayer(id)) _map!.removeLayer(id); });
   if (_map.getSource('contour-source')) _map.removeSource('contour-source');
