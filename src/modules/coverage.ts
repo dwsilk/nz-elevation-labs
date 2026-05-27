@@ -181,7 +181,7 @@ function buildYearRangeSlider(
   hd.className = 'yr-range-hd';
   const hdLabel = document.createElement('span');
   hdLabel.className = 'sec-lbl';
-  hdLabel.textContent = 'Year range';
+  hdLabel.textContent = 'Surveys by year';
   const resetBtn = document.createElement('button');
   resetBtn.className = 'yr-reset-btn';
   resetBtn.textContent = 'Reset';
@@ -259,6 +259,14 @@ function buildYearRangeSlider(
 
   wrap.append(labelsCol, trackCol, chartCol);
   section.appendChild(wrap);
+
+  const filteredHd = Object.assign(document.createElement('div'), { className: 'sec-lbl' });
+  filteredHd.textContent = 'Filtered coverage';
+  filteredHd.style.marginTop = '12px';
+  const filteredVal = Object.assign(document.createElement('div'), { className: 'cov-val', id: 'cov-filtered-val' });
+  const initKm2 = features.reduce((s, f) => s + featureAreaKm2(f), 0);
+  filteredVal.textContent = `${Math.round(initKm2).toLocaleString()} km² — ${(initKm2 / NZ_AREA_KM2 * 100).toFixed(1)}% of Aotearoa NZ`;
+  section.append(filteredHd, filteredVal);
 
   // ── Update UI ────────────────────────────────────────────
   function updateUI(): void {
@@ -420,6 +428,7 @@ function unloadCoverage(map: MaplibreMap): void {
   covMinDate = null; covMaxDate = null; covAllFeatures = null; resetYrSlider = null;
   document.getElementById('yr-range-section')!.innerHTML = '';
   document.getElementById('cov-stats')?.classList.add('hidden');
+  document.getElementById('cov-age-section')?.classList.add('hidden');
   document.getElementById('cov-detail')?.classList.add('hidden');
 }
 
@@ -486,15 +495,15 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
       const statsEl = document.getElementById('cov-stats');
       if (statsEl) {
         statsEl.innerHTML =
-          `<div class="sec-lbl">Coverage</div>` +
-          `<div class="cov-row"><span class="cov-lbl">Total</span><span class="cov-val">${totalStr}</span></div>` +
-          `<div class="cov-row"><span class="cov-lbl">Filtered</span><span class="cov-val" id="cov-filtered-val">${totalStr}</span></div>`;
+          `<div class="sec-lbl">Total coverage</div>` +
+          `<div class="cov-val">${totalStr}</div>`;
         statsEl.classList.remove('hidden');
       }
 
       // Update age legend labels
       document.getElementById('cov-age-newest')!.textContent = dateToYMD(covMaxDate);
       document.getElementById('cov-age-oldest')!.textContent = dateToYMD(covMinDate);
+      document.getElementById('cov-age-section')?.classList.remove('hidden');
 
       map.addSource(COV_SOURCE, { type: 'geojson', data: normGeoJSON, promoteId: 'id' } as GeoJSONSourceSpecification);
       covAllFeatures = normGeoJSON;

@@ -27,21 +27,6 @@
 <div id="map-wrap">
   <div id="map" role="application" aria-label="Elevation map of New Zealand"></div>
 
-  <div id="legend" role="complementary" aria-label="Map legend">
-    <div id="leg-elev">
-      <div class="leg-title">Elevation (m)</div>
-      <canvas id="leg-bar" width="136" height="13"></canvas>
-      <div class="leg-lbls"><span id="leg-lo">0</span><span id="leg-hi">3000</span></div>
-    </div>
-    <div id="leg-cov" class="hidden">
-      <div class="leg-title">Dataset age</div>
-      <div class="cov-age-grad"></div>
-      <div class="leg-lbls">
-        <span id="cov-age-oldest"></span>
-        <span id="cov-age-newest"></span>
-      </div>
-    </div>
-  </div>
 
 </div>
 
@@ -413,6 +398,13 @@
 
   <!-- ── COVERAGE TAB ── -->
   <div class="pan-body hidden" id="tab-coverage">
+    <div id="cov-age-section" class="hidden">
+      <div class="sec-lbl">Survey age</div>
+      <p class="dsm-desc">Using midpoint of data capture dates.</p>
+      <div class="cov-age-grad" style="margin-top:8px"></div>
+      <div class="ramp-lbls"><span id="cov-age-oldest"></span><span id="cov-age-newest"></span></div>
+    </div>
+
     <div id="cov-detail" class="cov-detail hidden">
       <div class="sec-lbl">Selected survey</div>
       <div class="cov-detail-inner" id="cov-detail-inner"></div>

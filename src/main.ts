@@ -116,17 +116,6 @@ const map = new MaplibreMap({
 
 map.addControl(new NavigationControl(), 'top-left');
 
-class LegendControl implements maplibregl.IControl {
-  private _wrap!: HTMLDivElement;
-  onAdd(): HTMLElement {
-    this._wrap = document.createElement('div');
-    this._wrap.className = 'maplibregl-ctrl';
-    this._wrap.appendChild(el('legend'));
-    return this._wrap;
-  }
-  onRemove(): void { this._wrap.parentNode?.removeChild(this._wrap); }
-}
-
 class Btn3DControl implements maplibregl.IControl {
   private _container!: HTMLDivElement;
   onAdd(): HTMLElement {
@@ -143,14 +132,12 @@ class Btn3DControl implements maplibregl.IControl {
   onRemove(): void { this._container.parentNode?.removeChild(this._container); }
 }
 
-map.addControl(new LegendControl(), 'bottom-left');
 map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
 map.addControl(new Btn3DControl(), 'top-left');
 
 // ── MAP LOAD ──────────────────────────────────────────────────────────────────
 
 map.on('load', () => {
-  updateLegend(stops);
   drawRamp(stops);
   renderThresholds();
   initContourControls(map);
@@ -163,15 +150,7 @@ map.on('load', () => {
 
 function applyRamp(): void {
   map.setPaintProperty('color-relief', 'color-relief-color', buildColorExpr(stops));
-  updateLegend(stops);
   drawRamp(stops);
-}
-
-function updateLegend(ss: ColourStop[]): void {
-  paintCanvas(el<HTMLCanvasElement>('leg-bar'), ss);
-  const s = [...ss].sort((a, b) => a.e - b.e);
-  el('leg-lo').textContent = s[0]!.e + ' m';
-  el('leg-hi').textContent = s[s.length - 1]!.e + ' m';
 }
 
 function drawRamp(ss: ColourStop[]): void {
@@ -534,15 +513,11 @@ function enterCoverageMode(): void {
   map.setLayoutProperty('hillshade', 'visibility', 'none');
   map.setLayoutProperty('hillshade-raster-layer', 'visibility', 'visible');
   map.setLayoutProperty('aerial-layer', 'visibility', 'none');
-  el('leg-elev').classList.add('hidden');
-  el('leg-cov').classList.remove('hidden');
   showCoverageLayers(map);
 }
 
 function leaveCoverageMode(): void {
   hideCoverageLayers(map);
-  el('leg-cov').classList.add('hidden');
-  el('leg-elev').classList.remove('hidden');
 }
 
 // ── CONTOUR MODE ──────────────────────────────────────────────────────────────
