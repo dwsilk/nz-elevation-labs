@@ -2,7 +2,7 @@
  * Contour tab — maplibre-contour integration, layer management,
  * threshold UI, presets, and live paint updates.
  */
-import type { Map as MaplibreMap } from 'maplibre-gl';
+import maplibregl, { type Map as MaplibreMap } from 'maplibre-gl';
 import mlcontour from 'maplibre-contour';
 import { ELEV_URL, DSM_URL, type DemDsm } from './config.js';
 
@@ -144,10 +144,9 @@ export function addContourLayers(): void {
     worker: true,
   });
 
-  // maplibre-contour needs the maplibregl namespace to register its protocol
-  import('maplibre-gl').then(({ default: maplibregl }) => {
-    demSource!.setupMaplibre(maplibregl);
-  });
+  // Register the contour/DEM protocol synchronously so it's ready before the
+  // source below requests tiles (an async import here races the first render).
+  demSource.setupMaplibre(maplibregl);
 
   const cfg = getCtConfig();
 
