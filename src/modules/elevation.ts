@@ -31,7 +31,7 @@ export const PRESETS: ColourPreset[] = [
     { e: 0, c: '#1a6b3c' }, { e: 400, c: '#8abd5a' }, { e: 900, c: '#e8d46a' },
     { e: 1600, c: '#c07a30' }, { e: 2200, c: '#8b5a2b' }, { e: 3000, c: '#f0ede8' },
   ]},
-  { name: 'NZ Topo50', stops: [
+  { name: 'Topographic', stops: [
     { e: 0, c: '#c8e6b4' }, { e: 200, c: '#b0d49a' }, { e: 500, c: '#98c280' },
     { e: 900, c: '#d4b882' }, { e: 1400, c: '#b89060' }, { e: 1900, c: '#9e7848' },
     { e: 2400, c: '#d8d0c0' }, { e: 3000, c: '#f5f5f5' },
