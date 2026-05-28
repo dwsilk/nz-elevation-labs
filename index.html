@@ -102,6 +102,119 @@
     </p>
   </div>
 
+    <!-- ── HILLSHADE ── -->
+    <button class="acc-hdr" data-tab="hillshade" aria-expanded="false" aria-controls="tab-hillshade">
+      <span>Hillshade</span>
+      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <div class="pan-body hidden" id="tab-hillshade">
+    <div>
+      <div class="sec-lbl">Dynamic</div>
+      <div class="presets">
+        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-standard" title="MapLibre Standard">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#eee 0%,#777 50%,#111 100%)"></div>
+          <span class="pre-lbl">Standard</span>
+        </button>
+        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-basic" title="MapLibre Basic">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#ddd 0%,#999 50%,#303030 100%)"></div>
+          <span class="pre-lbl">Basic</span>
+        </button>
+        <button class="pre-btn hs-pre-btn active" id="hs-pre-terrain-igor" title="MapLibre Igor">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#fff 0%,#555 40%,#000 100%)"></div>
+          <span class="pre-lbl">Igor</span>
+        </button>
+        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-combined" title="MapLibre Combined">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#f8f8f8 0%,#606060 45%,#080808 100%)"></div>
+          <span class="pre-lbl">Combined</span>
+        </button>
+        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-multidirectional" title="MapLibre Multidirectional">
+          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#d8d8d8 0%,#aaa 50%,#383838 100%)"></div>
+          <span class="pre-lbl">Multidirectional</span>
+        </button>
+      </div>
+    </div>
+    <div>
+      <div class="sec-lbl">Pre-rendered</div>
+      <div class="presets">
+        <button class="pre-btn hs-pre-btn" id="hs-pre-raster-standard" title="LINZ Standard Raster Hillshade">
+          <div class="hs-pre-sw" style="background:url('/thumbs/hs-raster-standard.webp') center/cover"></div>
+          <span class="pre-lbl">Standard</span>
+        </button>
+        <button class="pre-btn hs-pre-btn" id="hs-pre-raster-igor" title="LINZ Igor Raster Hillshade">
+          <div class="hs-pre-sw" style="background:url('/thumbs/hs-raster-igor.webp') center/cover"></div>
+          <span class="pre-lbl">Igor</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="hs-terrain-illumination">
+      <div class="sec-lbl">Illumination</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-hs-dir">Direction</label>
+            <span class="sl-val" id="sl-hs-dir-v">315°</span>
+          </div>
+          <input type="range" id="sl-hs-dir" min="0" max="359" value="315" step="1"/>
+        </div>
+        <div class="opt-row">
+          <label>Anchor</label>
+          <div class="dem-dsm-toggle" style="margin:0 0 0 auto;width:130px;flex-shrink:0">
+            <button class="dsm-btn active" id="btn-hs-map">Map</button>
+            <button class="dsm-btn" id="btn-hs-viewport">Viewport</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="hs-terrain-colours">
+      <div class="sec-lbl">Colours</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div class="opt-row">
+          <label>Shadow</label>
+          <input type="color" id="hs-shadow-color" value="#000000" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-hs-shadow-op">Shadow opacity</label>
+            <span class="sl-val" id="sl-hs-shadow-op-v">50%</span>
+          </div>
+          <input type="range" id="sl-hs-shadow-op" min="0" max="100" value="50" step="1"/>
+        </div>
+        <div class="opt-row">
+          <label>Highlight</label>
+          <input type="color" id="hs-highlight-color" value="#ffffff" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-hs-highlight-op">Highlight opacity</label>
+            <span class="sl-val" id="sl-hs-highlight-op-v">15%</span>
+          </div>
+          <input type="range" id="sl-hs-highlight-op" min="0" max="100" value="15" step="1"/>
+        </div>
+        <div class="opt-row">
+          <label>Accent</label>
+          <input type="color" id="hs-accent-color" value="#000000" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="sec-lbl">Intensity</div>
+      <div class="sl-wrap">
+        <div class="opt-row">
+          <label for="sl-hs" id="sl-hs-label">Exaggeration</label>
+          <span class="sl-val" id="sl-hs-v">0.5</span>
+        </div>
+        <input type="range" id="sl-hs" min="0" max="10" value="5" step="1"/>
+      </div>
+    </div>
+
+    <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
+      Hillshade via MapLibre terrain tile rendering or pre-computed <a href="https://basemaps.linz.govt.nz" style="color:#bbb" target="_blank" rel="noopener">LINZ Basemaps</a> rasters · CC BY 4.0
+    </p>
+  </div>
+
     <!-- ── CONTOURS ── -->
     <button class="acc-hdr" data-tab="contour" aria-expanded="false" aria-controls="tab-contour">
       <span>Contours</span>
@@ -286,119 +399,6 @@
 
     <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
       Contours computed client-side via <a href="https://github.com/onthegomap/maplibre-contour" style="color:#bbb" target="_blank" rel="noopener">maplibre-contour</a> from the DEM source.
-    </p>
-  </div>
-
-    <!-- ── HILLSHADE ── -->
-    <button class="acc-hdr" data-tab="hillshade" aria-expanded="false" aria-controls="tab-hillshade">
-      <span>Hillshade</span>
-      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
-    <div class="pan-body hidden" id="tab-hillshade">
-    <div>
-      <div class="sec-lbl">Dynamic</div>
-      <div class="presets">
-        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-standard" title="MapLibre Standard">
-          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#eee 0%,#777 50%,#111 100%)"></div>
-          <span class="pre-lbl">Standard</span>
-        </button>
-        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-basic" title="MapLibre Basic">
-          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#ddd 0%,#999 50%,#303030 100%)"></div>
-          <span class="pre-lbl">Basic</span>
-        </button>
-        <button class="pre-btn hs-pre-btn active" id="hs-pre-terrain-igor" title="MapLibre Igor">
-          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#fff 0%,#555 40%,#000 100%)"></div>
-          <span class="pre-lbl">Igor</span>
-        </button>
-        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-combined" title="MapLibre Combined">
-          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#f8f8f8 0%,#606060 45%,#080808 100%)"></div>
-          <span class="pre-lbl">Combined</span>
-        </button>
-        <button class="pre-btn hs-pre-btn" id="hs-pre-terrain-multidirectional" title="MapLibre Multidirectional">
-          <div class="hs-pre-sw" style="background:linear-gradient(to bottom right,#d8d8d8 0%,#aaa 50%,#383838 100%)"></div>
-          <span class="pre-lbl">Multidirectional</span>
-        </button>
-      </div>
-    </div>
-    <div>
-      <div class="sec-lbl">Pre-rendered</div>
-      <div class="presets">
-        <button class="pre-btn hs-pre-btn" id="hs-pre-raster-standard" title="LINZ Standard Raster Hillshade">
-          <div class="hs-pre-sw" style="background:url('/thumbs/hs-raster-standard.webp') center/cover"></div>
-          <span class="pre-lbl">Standard</span>
-        </button>
-        <button class="pre-btn hs-pre-btn" id="hs-pre-raster-igor" title="LINZ Igor Raster Hillshade">
-          <div class="hs-pre-sw" style="background:url('/thumbs/hs-raster-igor.webp') center/cover"></div>
-          <span class="pre-lbl">Igor</span>
-        </button>
-      </div>
-    </div>
-
-    <div id="hs-terrain-illumination">
-      <div class="sec-lbl">Illumination</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="sl-wrap">
-          <div class="opt-row">
-            <label for="sl-hs-dir">Direction</label>
-            <span class="sl-val" id="sl-hs-dir-v">315°</span>
-          </div>
-          <input type="range" id="sl-hs-dir" min="0" max="359" value="315" step="1"/>
-        </div>
-        <div class="opt-row">
-          <label>Anchor</label>
-          <div class="dem-dsm-toggle" style="margin:0 0 0 auto;width:130px;flex-shrink:0">
-            <button class="dsm-btn active" id="btn-hs-map">Map</button>
-            <button class="dsm-btn" id="btn-hs-viewport">Viewport</button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div id="hs-terrain-colours">
-      <div class="sec-lbl">Colours</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="opt-row">
-          <label>Shadow</label>
-          <input type="color" id="hs-shadow-color" value="#000000" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
-        </div>
-        <div class="sl-wrap">
-          <div class="opt-row">
-            <label for="sl-hs-shadow-op">Shadow opacity</label>
-            <span class="sl-val" id="sl-hs-shadow-op-v">50%</span>
-          </div>
-          <input type="range" id="sl-hs-shadow-op" min="0" max="100" value="50" step="1"/>
-        </div>
-        <div class="opt-row">
-          <label>Highlight</label>
-          <input type="color" id="hs-highlight-color" value="#ffffff" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
-        </div>
-        <div class="sl-wrap">
-          <div class="opt-row">
-            <label for="sl-hs-highlight-op">Highlight opacity</label>
-            <span class="sl-val" id="sl-hs-highlight-op-v">15%</span>
-          </div>
-          <input type="range" id="sl-hs-highlight-op" min="0" max="100" value="15" step="1"/>
-        </div>
-        <div class="opt-row">
-          <label>Accent</label>
-          <input type="color" id="hs-accent-color" value="#000000" style="width:28px;height:28px;border:1px solid var(--bdr);border-radius:3px;cursor:pointer;padding:1px;margin-left:auto"/>
-        </div>
-      </div>
-    </div>
-
-    <div>
-      <div class="sec-lbl">Intensity</div>
-      <div class="sl-wrap">
-        <div class="opt-row">
-          <label for="sl-hs" id="sl-hs-label">Exaggeration</label>
-          <span class="sl-val" id="sl-hs-v">0.5</span>
-        </div>
-        <input type="range" id="sl-hs" min="0" max="10" value="5" step="1"/>
-      </div>
-    </div>
-
-    <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
-      Hillshade via MapLibre terrain tile rendering or pre-computed <a href="https://basemaps.linz.govt.nz" style="color:#bbb" target="_blank" rel="noopener">LINZ Basemaps</a> rasters · CC BY 4.0
     </p>
   </div>
 
