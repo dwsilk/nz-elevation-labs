@@ -756,7 +756,11 @@ function switchTab(next: TabName): void {
   const prev = activeTab;
   if (prev === next) return;
 
-  document.querySelectorAll<HTMLElement>('.pan-tab').forEach(t => t.classList.toggle('active', t.dataset['tab'] === next));
+  document.querySelectorAll<HTMLElement>('.acc-hdr').forEach(t => {
+    const on = t.dataset['tab'] === next;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-expanded', String(on));
+  });
   document.querySelectorAll('.pan-body').forEach(b => b.classList.add('hidden'));
   document.getElementById(`tab-${next}`)?.classList.remove('hidden');
   activeTab = next;
@@ -776,8 +780,8 @@ function switchTab(next: TabName): void {
   else map.once('load', enter);
 }
 
-document.querySelectorAll<HTMLButtonElement>('.pan-tab').forEach(tab => {
-  tab.addEventListener('click', () => switchTab(tab.dataset['tab'] as TabName));
+document.querySelectorAll<HTMLButtonElement>('.acc-hdr').forEach(hdr => {
+  hdr.addEventListener('click', () => switchTab(hdr.dataset['tab'] as TabName));
 });
 
 // Apply view state encoded in the URL hash. Camera is restored automatically by

@@ -31,19 +31,26 @@
 #pan-global .sec-lbl { margin-bottom: 0; }
 #pan-global .dem-dsm-toggle { margin-bottom: 0; }
 
-/* ── TABS ── */
-.pan-tabs {
-  display: flex; border-bottom: 1px solid var(--bdr); background: var(--blue-lt);
-}
-.pan-tab {
-  flex: 1; padding: 10px 0;
+/* ── ACCORDION ── */
+.acc { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+
+.acc-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 11px 15px;
   font-family: var(--font); font-size: 12px; font-weight: 500;
-  color: var(--mid); background: none; border: none;
-  border-bottom: 2px solid transparent; cursor: pointer;
-  transition: color .15s, border-color .15s; margin-bottom: -1px;
+  color: var(--mid); background: #fff; border: none;
+  border-bottom: 1px solid var(--bdr);
+  cursor: pointer; text-align: left;
+  transition: color .15s, background .15s;
 }
-.pan-tab:hover { color: var(--navy); }
-.pan-tab.active { color: var(--navy); border-bottom-color: var(--navy); }
+.acc-hdr:hover { color: var(--navy); background: var(--blue-lt); }
+.acc-hdr.active { color: var(--navy); background: var(--blue-lt); font-weight: 600; }
+
+.acc-chev {
+  width: 11px; height: 11px; flex-shrink: 0;
+  transition: transform .2s ease;
+}
+.acc-hdr.active .acc-chev { transform: rotate(90deg); }
 
 .pan-body { flex: 1; overflow-y: auto; padding: 14px 15px; display: flex; flex-direction: column; gap: 16px; }
 .pan-hd { background: var(--blue-lt); border-bottom: 1px solid var(--bdr); padding: 13px 15px 11px; }
