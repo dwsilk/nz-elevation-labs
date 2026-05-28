@@ -456,6 +456,33 @@
       Coverage data: <a href="https://nz-elevation.s3-ap-southeast-2.amazonaws.com/new-zealand/new-zealand/dem_1m/2193/capture-dates.geojson" style="color:#bbb" target="_blank" rel="noopener">LINZ NZ Elevation</a> · CC BY 4.0
     </p>
   </div>
+
+    <!-- ── EXPORT ── -->
+    <button class="acc-hdr" data-tab="export" aria-expanded="false" aria-controls="tab-export">
+      <span>Export</span>
+      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <div class="pan-body hidden" id="tab-export">
+      <p class="dsm-desc">Click a tile on the map to download its GeoTIFF.</p>
+
+      <div id="exp-progress" class="exp-progress">
+        <span class="sec-lbl" style="margin-bottom:0">Loading tiles</span>
+        <span class="exp-progress-count">
+          <span id="exp-progress-n">0</span> / <span id="exp-progress-total">…</span>
+        </span>
+      </div>
+
+      <div id="exp-detail" class="exp-detail hidden">
+        <div class="sec-lbl">Selected tile</div>
+        <div class="exp-detail-inner" id="exp-detail-inner"></div>
+        <a class="exp-dl-btn" id="exp-dl-btn" href="#" target="_blank" rel="noopener" download>Download TIFF</a>
+        <button class="exp-clear-btn" id="exp-clear-btn">✕ Clear selection</button>
+      </div>
+
+      <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
+        Cloud-Optimized GeoTIFFs hosted by LINZ · CC BY 4.0
+      </p>
+    </div>
   </div>
 </aside>
 

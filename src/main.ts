@@ -21,11 +21,15 @@ import {
 import {
   loadCoverage, prefetchCoverage, initCoverageControls, showCoverageLayers, hideCoverageLayers, switchCoverageSrc,
 } from './modules/coverage.js';
+import {
+  loadExport, initExportControls, showExportLayers, hideExportLayers, switchExportSrc,
+} from './modules/export.js';
 import { initTerrainPreviews } from './modules/hs-thumbs.js';
 
 import './styles/main.css';
 import './styles/panel.css';
 import './styles/coverage.css';
+import './styles/export.css';
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
@@ -214,6 +218,7 @@ map.on('load', () => {
   renderThresholds();
   initContourControls(map);
   initCoverageControls(map);
+  initExportControls(map);
   init3DButton(map);
   prefetchCoverage();
   restoreFromHash();
@@ -585,6 +590,7 @@ function switchSource(src: DemDsm): void {
   el<HTMLButtonElement>('btn-dem').classList.toggle('active', src === 'dem');
   el<HTMLButtonElement>('btn-dsm').classList.toggle('active', src === 'dsm');
   switchCoverageSrc(src, map, activeTab === 'coverage');
+  switchExportSrc(src, map, activeTab === 'export');
   setHashParam('dataset', src === 'dsm' ? 'dsm' : null);
 }
 
@@ -593,7 +599,7 @@ el<HTMLButtonElement>('btn-dsm').addEventListener('click', () => switchSource('d
 
 // ── TAB SWITCHING ─────────────────────────────────────────────────────────────
 
-type TabName = 'elevation' | 'contour' | 'hillshade' | 'coverage';
+type TabName = 'elevation' | 'contour' | 'hillshade' | 'coverage' | 'export';
 let activeTab: TabName = 'elevation';
 
 // ── BASE LAYER REBUILD ────────────────────────────────────────────────────────
@@ -712,6 +718,27 @@ function leaveCoverageMode(): void {
   hideCoverageLayers(map);
 }
 
+// ── EXPORT MODE ───────────────────────────────────────────────────────────────
+
+function buildExportBase(): void {
+  // Same hillshade backdrop as the coverage mode.
+  map.addSource('hillshade-raster', rasterSpec(HS_URLS.igor[activeSrc]));
+  addBaseLayer({
+    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+    paint: { 'raster-opacity': 1 },
+  } as Parameters<typeof map.addLayer>[0]);
+}
+
+function enterExportMode(): void {
+  teardownBase();
+  buildExportBase();
+  showExportLayers(map);
+}
+
+function leaveExportMode(): void {
+  hideExportLayers(map);
+}
+
 // ── CONTOUR MODE ──────────────────────────────────────────────────────────────
 
 type ContourBackdrop = 'igor-dem' | 'igor-dsm' | 'aerial';
@@ -770,11 +797,13 @@ function switchTab(next: TabName): void {
   const enter = (): void => {
     if (prev === 'coverage') leaveCoverageMode();
     if (prev === 'contour') removeContourLayers();
+    if (prev === 'export') leaveExportMode();
 
     if (next === 'elevation') enterElevationMode();
     else if (next === 'hillshade') enterHillshadeMode();
     else if (next === 'contour') enterContourMode();
     else if (next === 'coverage') { enterCoverageMode(); loadCoverage(map); }
+    else if (next === 'export') { enterExportMode(); loadExport(map, activeSrc); }
   };
   if (map.loaded()) enter();
   else map.once('load', enter);
@@ -791,7 +820,7 @@ function restoreFromHash(): void {
   const p = readHash();
   if (p['dataset'] === 'dsm') switchSource('dsm');
   const mode = p['mode'];
-  if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage') switchTab(mode);
+  if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage' || mode === 'export') switchTab(mode);
 
   const preset = p['preset'];
   if (preset) {
