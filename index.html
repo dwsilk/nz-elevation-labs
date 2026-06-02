@@ -505,6 +505,45 @@
     </p>
   </div>
 
+    <!-- ── INSPECT ── -->
+    <button class="acc-hdr" data-tab="inspect" aria-expanded="false" aria-controls="tab-inspect">
+      <span>Inspect</span>
+      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <div class="pan-body hidden" id="tab-inspect">
+      <p class="dsm-desc">Read elevations at a point, or draw a profile across the terrain.</p>
+
+      <div>
+        <div class="sec-lbl">Tool</div>
+        <div class="dem-dsm-toggle">
+          <button class="dsm-btn active" id="insp-tool-spot">Spot elevation</button>
+          <button class="dsm-btn" id="insp-tool-profile">Profile</button>
+        </div>
+      </div>
+
+      <div id="insp-spot-detail" class="insp-detail hidden">
+        <div class="sec-lbl">Spot elevation</div>
+        <div class="insp-row"><span class="insp-lbl">Latitude</span><span class="insp-val" id="insp-spot-lat"></span></div>
+        <div class="insp-row"><span class="insp-lbl">Longitude</span><span class="insp-val" id="insp-spot-lng"></span></div>
+        <div class="insp-row"><span class="insp-lbl">Elevation</span><span class="insp-val" id="insp-spot-elev"></span></div>
+        <button class="insp-clear-btn" id="insp-spot-clear">✕ Clear</button>
+      </div>
+
+      <div id="insp-profile-hint" class="insp-hint hidden">Click two points on the map to draw a profile.</div>
+      <div id="insp-profile-detail" class="insp-detail hidden">
+        <div class="sec-lbl">Profile</div>
+        <svg id="insp-profile-chart" viewBox="0 0 300 120" preserveAspectRatio="none" style="width:100%;height:120px;background:var(--blue-lt);border:1px solid var(--bdr);border-radius:3px"></svg>
+        <div class="insp-row"><span class="insp-lbl">Length</span><span class="insp-val" id="insp-profile-len"></span></div>
+        <div class="insp-row"><span class="insp-lbl">Min / Max</span><span class="insp-val" id="insp-profile-range"></span></div>
+        <div class="insp-row"><span class="insp-lbl">Δ Elevation</span><span class="insp-val" id="insp-profile-delta"></span></div>
+        <button class="insp-clear-btn" id="insp-profile-clear">✕ Clear</button>
+      </div>
+
+      <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
+        Elevations sampled from the active DEM/DSM source.
+      </p>
+    </div>
+
     <!-- ── EXPORT ── -->
     <button class="acc-hdr" data-tab="export" aria-expanded="false" aria-controls="tab-export">
       <span>Export</span>

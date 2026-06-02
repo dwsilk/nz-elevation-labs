@@ -58,6 +58,10 @@ export const ANALYSIS_URLS: Record<HsAnalysis, Record<DemDsm, string>> = {
   },
 };
 
+export const INSPECT_LINE_SOURCE = 'inspect-line'       as const;
+export const INSPECT_LINE_LAYER  = 'inspect-line-layer' as const;
+export const INSPECT_PROFILE_SAMPLES = 256;
+
 export const EXP_SOURCE  = 'export-items'    as const;
 export const EXP_FILL    = 'export-fill'     as const;
 export const EXP_HOVER   = 'export-hover'    as const;

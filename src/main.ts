@@ -28,6 +28,7 @@ import {
 } from './modules/export.js';
 import { registerDiffProtocol, buildDiffColorExpr } from './modules/diff.js';
 import { registerAnalysisProtocol } from './modules/analysis.js';
+import { initInspectControls, attachInspect, detachInspect } from './modules/inspect.js';
 import { initTerrainPreviews } from './modules/hs-thumbs.js';
 
 import './styles/main.css';
@@ -35,6 +36,7 @@ import './styles/panel.css';
 import './styles/coverage.css';
 import './styles/export.css';
 import './styles/diff.css';
+import './styles/inspect.css';
 
 // Register the diff-dem:// virtual tile protocol once, before any map activity.
 registerDiffProtocol();
@@ -235,6 +237,7 @@ map.on('load', () => {
   initContourControls(map);
   initCoverageControls(map);
   initExportControls(map);
+  initInspectControls(map);
   init3DButton(map);
   prefetchCoverage();
   restoreFromHash();
@@ -636,7 +639,7 @@ el<HTMLButtonElement>('btn-dsm').addEventListener('click', () => switchSource('d
 
 // ── TAB SWITCHING ─────────────────────────────────────────────────────────────
 
-type TabName = 'elevation' | 'contour' | 'hillshade' | 'coverage' | 'export' | 'diff';
+type TabName = 'elevation' | 'contour' | 'hillshade' | 'coverage' | 'export' | 'diff' | 'inspect';
 let activeTab: TabName = 'elevation';
 
 // ── BASE LAYER REBUILD ────────────────────────────────────────────────────────
@@ -804,6 +807,28 @@ function enterDiffMode(): void {
   buildDiffBase();
 }
 
+// ── INSPECT MODE ──────────────────────────────────────────────────────────────
+
+function buildInspectBase(): void {
+  // Same hillshade backdrop as Coverage / Export — gives terrain context
+  // without competing with the spot/profile overlays.
+  map.addSource('hillshade-raster', rasterSpec(HS_URLS.igor[activeSrc]));
+  addBaseLayer({
+    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+    paint: { 'raster-opacity': 1 },
+  } as Parameters<typeof map.addLayer>[0]);
+}
+
+function enterInspectMode(): void {
+  teardownBase();
+  buildInspectBase();
+  attachInspect(map, is3D);
+}
+
+function leaveInspectMode(): void {
+  detachInspect(map, is3D);
+}
+
 // ── CONTOUR MODE ──────────────────────────────────────────────────────────────
 
 type ContourBackdrop = 'igor-dem' | 'igor-dsm' | 'aerial';
@@ -863,6 +888,7 @@ function switchTab(next: TabName): void {
     if (prev === 'coverage') leaveCoverageMode();
     if (prev === 'contour') removeContourLayers();
     if (prev === 'export') leaveExportMode();
+    if (prev === 'inspect') leaveInspectMode();
 
     if (next === 'elevation') enterElevationMode();
     else if (next === 'hillshade') enterHillshadeMode();
@@ -870,6 +896,7 @@ function switchTab(next: TabName): void {
     else if (next === 'coverage') { enterCoverageMode(); loadCoverage(map); }
     else if (next === 'export') { enterExportMode(); loadExport(map, activeSrc); }
     else if (next === 'diff') enterDiffMode();
+    else if (next === 'inspect') enterInspectMode();
   };
   if (map.loaded()) enter();
   else map.once('load', enter);
@@ -886,7 +913,7 @@ function restoreFromHash(): void {
   const p = readHash();
   if (p['dataset'] === 'dsm') switchSource('dsm');
   const mode = p['mode'];
-  if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage' || mode === 'export' || mode === 'diff') switchTab(mode);
+  if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage' || mode === 'export' || mode === 'diff' || mode === 'inspect') switchTab(mode);
 
   const preset = p['preset'];
   if (preset) {
