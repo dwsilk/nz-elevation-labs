@@ -8,7 +8,8 @@ import {
   API, ELEV_URL, DSM_URL, HS_URLS, AERIAL_URL,
   MAP_CENTER, MAP_ZOOM,
   DIFF_LAYER, DIFF_SOURCE, DIFF_URL,
-  type DemDsm, type HsSource, type HsRaster, type HsMethod,
+  ANALYSIS_LAYER, ANALYSIS_SOURCE, ANALYSIS_URLS,
+  type DemDsm, type HsSource, type HsRaster, type HsMethod, type HsAnalysis,
 } from './modules/config.js';
 import {
   PRESETS, stops, activePreset, setStops, setActivePreset,
@@ -26,6 +27,7 @@ import {
   loadExport, initExportControls, showExportLayers, hideExportLayers, switchExportSrc,
 } from './modules/export.js';
 import { registerDiffProtocol, buildDiffColorExpr } from './modules/diff.js';
+import { registerAnalysisProtocol } from './modules/analysis.js';
 import { initTerrainPreviews } from './modules/hs-thumbs.js';
 
 import './styles/main.css';
@@ -36,6 +38,7 @@ import './styles/diff.css';
 
 // Register the diff-dem:// virtual tile protocol once, before any map activity.
 registerDiffProtocol();
+registerAnalysisProtocol();
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
@@ -86,16 +89,23 @@ function rampIndexFromSlug(slug: string): number {
   return PRESETS.findIndex(p => slugify(p.name) === slug);
 }
 
-// `terrain:igor` <-> `dynamic.igor`, `raster:igor` <-> `raster.igor`.
+// `terrain:igor` <-> `dynamic.igor`, `raster:igor` <-> `raster.igor`,
+// `analysis:slope` <-> `analysis.slope`.
 function hsToken(src: HsSource): string {
-  return src.startsWith('terrain:') ? `dynamic.${src.slice(8)}` : `raster.${src.slice(7)}`;
+  if (src.startsWith('terrain:'))  return `dynamic.${src.slice(8)}`;
+  if (src.startsWith('analysis:')) return `analysis.${src.slice(9)}`;
+  return `raster.${src.slice(7)}`;
 }
 
 function tokenToHs(token: string): HsSource | null {
   const dot = token.indexOf('.');
   if (dot < 0) return null;
   const kind = token.slice(0, dot), method = token.slice(dot + 1);
-  const src = kind === 'dynamic' ? `terrain:${method}` : kind === 'raster' ? `raster:${method}` : null;
+  const src =
+      kind === 'dynamic'  ? `terrain:${method}`
+    : kind === 'raster'   ? `raster:${method}`
+    : kind === 'analysis' ? `analysis:${method}`
+    : null;
   return src && (HS_SOURCES as string[]).includes(src) ? (src as HsSource) : null;
 }
 
@@ -399,10 +409,11 @@ function hexToRgba(hex: string, pct: number): string {
   return `rgba(${r},${g},${b},${(pct / 100).toFixed(2)})`;
 }
 
-function updateHsTerrainVis(isTerrainSource: boolean): void {
-  el('hs-terrain-illumination').classList.toggle('hidden', !isTerrainSource);
-  el('hs-terrain-colours').classList.toggle('hidden', !isTerrainSource);
-  el('sl-hs-label').textContent = isTerrainSource ? 'Exaggeration' : 'Opacity';
+function updateHsTerrainVis(type: string): void {
+  const isTerrain = type === 'terrain';
+  el('hs-terrain-illumination').classList.toggle('hidden', !isTerrain);
+  el('hs-terrain-colours').classList.toggle('hidden', !isTerrain);
+  el('sl-hs-label').textContent = isTerrain ? 'Exaggeration' : 'Opacity';
 }
 
 function syncHsSlider(type: string): void {
@@ -415,25 +426,35 @@ function syncHsSlider(type: string): void {
 function applyHsPreset(src: HsSource): void {
   hsSource = src;
   const [type, method] = src.split(':') as [string, string];
-  updateHsTerrainVis(type === 'terrain');
+  updateHsTerrainVis(type);
   syncHsSlider(type);
   document.querySelectorAll('.hs-pre-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(`hs-pre-${type}-${method}`)?.classList.add('active');
   if (activeTab !== 'hillshade') return;
+
+  // Each preset family owns one of three render targets — turn the others off.
   if (type === 'terrain') {
     map.setPaintProperty('hillshade', 'hillshade-method', method as HsMethod);
     map.setPaintProperty('hillshade', 'hillshade-exaggeration', terrainExag);
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 0);
-  } else {
+    map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', 0);
+  } else if (type === 'raster') {
     (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS[method as HsRaster][activeSrc]]);
     map.setPaintProperty('hillshade', 'hillshade-exaggeration', 0);
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
+    map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', 0);
+  } else { // analysis
+    (map.getSource(ANALYSIS_SOURCE) as RasterTileSource)
+      .setTiles([ANALYSIS_URLS[method as HsAnalysis][activeSrc]]);
+    map.setPaintProperty('hillshade', 'hillshade-exaggeration', 0);
+    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 0);
+    map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', 1.0);
   }
   syncPresetHash();
 }
 
 const HS_SOURCES: HsSource[] = ['terrain:standard', 'terrain:basic', 'terrain:igor', 'terrain:combined',
-  'terrain:multidirectional', 'raster:standard', 'raster:igor'];
+  'terrain:multidirectional', 'raster:standard', 'raster:igor', 'analysis:slope', 'analysis:aspect'];
 
 HS_SOURCES.forEach(src => {
   const [type, method] = src.split(':') as [string, string];
@@ -625,8 +646,8 @@ let activeTab: TabName = 'elevation';
 // source (3D terrain) and the contour/coverage overlay layers are left untouched.
 
 const ATTR = '© Land Information New Zealand CC BY 4.0';
-const BASE_LAYER_IDS = ['color-relief', 'hillshade', 'hillshade-raster-layer', 'aerial-layer', DIFF_LAYER];
-const BASE_SOURCE_IDS = ['dem-hillshade', 'dem-relief', 'hillshade-raster', 'aerial', DIFF_SOURCE];
+const BASE_LAYER_IDS = ['color-relief', 'hillshade', 'hillshade-raster-layer', 'aerial-layer', DIFF_LAYER, ANALYSIS_LAYER];
+const BASE_SOURCE_IDS = ['dem-hillshade', 'dem-relief', 'hillshade-raster', 'aerial', DIFF_SOURCE, ANALYSIS_SOURCE];
 
 function teardownBase(): void {
   for (const id of BASE_LAYER_IDS) if (map.getLayer(id)) map.removeLayer(id);
@@ -686,12 +707,17 @@ function buildElevationBase(): void {
 function buildHillshadeBase(): void {
   map.addSource('dem-hillshade', demSpec());
   map.addSource('hillshade-raster', rasterSpec(HS_URLS.standard[activeSrc]));
+  map.addSource(ANALYSIS_SOURCE, rasterSpec(ANALYSIS_URLS.slope[activeSrc]));
   addBaseLayer({
     id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
     paint: hillshadePaint('igor', 0),
   } as Parameters<typeof map.addLayer>[0]);
   addBaseLayer({
     id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+    paint: { 'raster-opacity': 0 },
+  } as Parameters<typeof map.addLayer>[0]);
+  addBaseLayer({
+    id: ANALYSIS_LAYER, type: 'raster', source: ANALYSIS_SOURCE,
     paint: { 'raster-opacity': 0 },
   } as Parameters<typeof map.addLayer>[0]);
 }

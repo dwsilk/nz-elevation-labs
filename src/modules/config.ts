@@ -6,7 +6,8 @@ export const DSM_URL  = `https://basemaps.linz.govt.nz/v1/tiles/elevation-dsm/We
 export type DemDsm = 'dem' | 'dsm';
 export type HsMethod = 'standard' | 'basic' | 'igor' | 'combined' | 'multidirectional';
 export type HsRaster = 'standard' | 'igor';
-export type HsSource = `terrain:${HsMethod}` | `raster:${HsRaster}`;
+export type HsAnalysis = 'slope' | 'aspect';
+export type HsSource = `terrain:${HsMethod}` | `raster:${HsRaster}` | `analysis:${HsAnalysis}`;
 
 export const HS_URLS: Record<HsRaster, Record<DemDsm, string>> = {
   standard: {
@@ -42,6 +43,20 @@ export const DIFF_PROTOCOL = 'diff-dem' as const;
 export const DIFF_URL = `${DIFF_PROTOCOL}://{z}/{x}/{y}`;
 export const DIFF_SOURCE = 'dem-diff' as const;
 export const DIFF_LAYER  = 'color-relief-diff' as const;
+
+export const ANALYSIS_PROTOCOL = 'analysis-png' as const;
+export const ANALYSIS_SOURCE   = 'hillshade-analysis' as const;
+export const ANALYSIS_LAYER    = 'hillshade-analysis-layer' as const;
+export const ANALYSIS_URLS: Record<HsAnalysis, Record<DemDsm, string>> = {
+  slope: {
+    dem: `${ANALYSIS_PROTOCOL}://slope/dem/{z}/{x}/{y}`,
+    dsm: `${ANALYSIS_PROTOCOL}://slope/dsm/{z}/{x}/{y}`,
+  },
+  aspect: {
+    dem: `${ANALYSIS_PROTOCOL}://aspect/dem/{z}/{x}/{y}`,
+    dsm: `${ANALYSIS_PROTOCOL}://aspect/dsm/{z}/{x}/{y}`,
+  },
+};
 
 export const EXP_SOURCE  = 'export-items'    as const;
 export const EXP_FILL    = 'export-fill'     as const;
