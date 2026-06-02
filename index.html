@@ -402,6 +402,40 @@
     </p>
   </div>
 
+    <!-- ── DIFFERENCE ── -->
+    <button class="acc-hdr" data-tab="diff" aria-expanded="false" aria-controls="tab-diff">
+      <span>Difference (DSM − DEM)</span>
+      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+    <div class="pan-body hidden" id="tab-diff">
+      <p class="dsm-desc">Surface objects above bare earth — vegetation canopy and buildings — computed live from the DEM and DSM tile pair.</p>
+
+      <div>
+        <div class="sec-lbl">Legend</div>
+        <div class="diff-legend">
+          <div class="diff-bar"></div>
+          <div class="diff-lbls">
+            <span>0 m</span><span>5</span><span>15</span><span>30</span><span>60+</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="sec-lbl">Options</div>
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-diff-op">Layer opacity</label>
+            <span class="sl-val" id="sl-diff-op-v">90%</span>
+          </div>
+          <input type="range" id="sl-diff-op" min="0" max="100" value="90" step="1"/>
+        </div>
+      </div>
+
+      <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
+        Computed client-side from <a href="https://basemaps.linz.govt.nz" style="color:#bbb" target="_blank" rel="noopener">LINZ Basemaps</a> terrain-RGB tiles · CC BY 4.0
+      </p>
+    </div>
+
     <!-- ── COVERAGE ── -->
     <button class="acc-hdr" data-tab="coverage" aria-expanded="false" aria-controls="tab-coverage">
       <span>Coverage</span>

@@ -38,6 +38,11 @@ export const STAC_COLLECTIONS: Record<DemDsm, string> = {
   dsm: 'https://nz-elevation.s3-ap-southeast-2.amazonaws.com/new-zealand/new-zealand/dsm_1m/2193/collection.json',
 };
 
+export const DIFF_PROTOCOL = 'diff-dem' as const;
+export const DIFF_URL = `${DIFF_PROTOCOL}://{z}/{x}/{y}`;
+export const DIFF_SOURCE = 'dem-diff' as const;
+export const DIFF_LAYER  = 'color-relief-diff' as const;
+
 export const EXP_SOURCE  = 'export-items'    as const;
 export const EXP_FILL    = 'export-fill'     as const;
 export const EXP_HOVER   = 'export-hover'    as const;

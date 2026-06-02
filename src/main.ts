@@ -7,6 +7,7 @@ import maplibregl, { Map as MaplibreMap, NavigationControl, ScaleControl, Raster
 import {
   API, ELEV_URL, DSM_URL, HS_URLS, AERIAL_URL,
   MAP_CENTER, MAP_ZOOM,
+  DIFF_LAYER, DIFF_SOURCE, DIFF_URL,
   type DemDsm, type HsSource, type HsRaster, type HsMethod,
 } from './modules/config.js';
 import {
@@ -24,12 +25,17 @@ import {
 import {
   loadExport, initExportControls, showExportLayers, hideExportLayers, switchExportSrc,
 } from './modules/export.js';
+import { registerDiffProtocol, buildDiffColorExpr } from './modules/diff.js';
 import { initTerrainPreviews } from './modules/hs-thumbs.js';
 
 import './styles/main.css';
 import './styles/panel.css';
 import './styles/coverage.css';
 import './styles/export.css';
+import './styles/diff.css';
+
+// Register the diff-dem:// virtual tile protocol once, before any map activity.
+registerDiffProtocol();
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 
@@ -517,6 +523,16 @@ el<HTMLInputElement>('sl-op').addEventListener('input', e => {
   }
 });
 
+// ── DIFFERENCE LAYER OPACITY ──────────────────────────────────────────────────
+
+el<HTMLInputElement>('sl-diff-op').addEventListener('input', e => {
+  const v = Number((e.target as HTMLInputElement).value);
+  el('sl-diff-op-v').textContent = v + '%';
+  if (map.getLayer(DIFF_LAYER)) {
+    map.setPaintProperty(DIFF_LAYER, 'color-relief-opacity', v / 100);
+  }
+});
+
 // ── 3D TERRAIN ────────────────────────────────────────────────────────────────
 
 let is3D = false;
@@ -599,7 +615,7 @@ el<HTMLButtonElement>('btn-dsm').addEventListener('click', () => switchSource('d
 
 // ── TAB SWITCHING ─────────────────────────────────────────────────────────────
 
-type TabName = 'elevation' | 'contour' | 'hillshade' | 'coverage' | 'export';
+type TabName = 'elevation' | 'contour' | 'hillshade' | 'coverage' | 'export' | 'diff';
 let activeTab: TabName = 'elevation';
 
 // ── BASE LAYER REBUILD ────────────────────────────────────────────────────────
@@ -609,8 +625,8 @@ let activeTab: TabName = 'elevation';
 // source (3D terrain) and the contour/coverage overlay layers are left untouched.
 
 const ATTR = '© Land Information New Zealand CC BY 4.0';
-const BASE_LAYER_IDS = ['color-relief', 'hillshade', 'hillshade-raster-layer', 'aerial-layer'];
-const BASE_SOURCE_IDS = ['dem-hillshade', 'dem-relief', 'hillshade-raster', 'aerial'];
+const BASE_LAYER_IDS = ['color-relief', 'hillshade', 'hillshade-raster-layer', 'aerial-layer', DIFF_LAYER];
+const BASE_SOURCE_IDS = ['dem-hillshade', 'dem-relief', 'hillshade-raster', 'aerial', DIFF_SOURCE];
 
 function teardownBase(): void {
   for (const id of BASE_LAYER_IDS) if (map.getLayer(id)) map.removeLayer(id);
@@ -739,6 +755,29 @@ function leaveExportMode(): void {
   hideExportLayers(map);
 }
 
+// ── DIFFERENCE MODE (DSM − DEM) ───────────────────────────────────────────────
+
+function buildDiffBase(): void {
+  map.addSource('dem-hillshade', demSpec());
+  map.addSource(DIFF_SOURCE, {
+    type: 'raster-dem', tiles: [DIFF_URL], tileSize: 256, encoding: 'mapbox', attribution: ATTR,
+  } as SourceSpec);
+  const opPct = Number(el<HTMLInputElement>('sl-diff-op').value);
+  addBaseLayer({
+    id: DIFF_LAYER, type: 'color-relief', source: DIFF_SOURCE,
+    paint: { 'color-relief-color': buildDiffColorExpr(), 'color-relief-opacity': opPct / 100 },
+  } as Parameters<typeof map.addLayer>[0]);
+  addBaseLayer({
+    id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
+    paint: hillshadePaint('igor', 0.5),
+  } as Parameters<typeof map.addLayer>[0]);
+}
+
+function enterDiffMode(): void {
+  teardownBase();
+  buildDiffBase();
+}
+
 // ── CONTOUR MODE ──────────────────────────────────────────────────────────────
 
 type ContourBackdrop = 'igor-dem' | 'igor-dsm' | 'aerial';
@@ -804,6 +843,7 @@ function switchTab(next: TabName): void {
     else if (next === 'contour') enterContourMode();
     else if (next === 'coverage') { enterCoverageMode(); loadCoverage(map); }
     else if (next === 'export') { enterExportMode(); loadExport(map, activeSrc); }
+    else if (next === 'diff') enterDiffMode();
   };
   if (map.loaded()) enter();
   else map.once('load', enter);
@@ -820,7 +860,7 @@ function restoreFromHash(): void {
   const p = readHash();
   if (p['dataset'] === 'dsm') switchSource('dsm');
   const mode = p['mode'];
-  if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage' || mode === 'export') switchTab(mode);
+  if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage' || mode === 'export' || mode === 'diff') switchTab(mode);
 
   const preset = p['preset'];
   if (preset) {

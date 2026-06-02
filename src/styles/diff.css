@@ -1,0 +1,21 @@
+/* ── DIFFERENCE TAB ── */
+
+.diff-legend {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.diff-bar {
+  height: 16px; border-radius: 3px; border: 1px solid var(--bdr);
+  background: linear-gradient(
+    to right,
+    rgba(120,200,100,0.40) 0%,
+    rgba(150,210,80,0.70)  8.3%,
+    rgba(240,200,60,0.85)  25%,
+    rgba(240,120,60,0.95)  50%,
+    rgba(200,40,40,1.0)    100%
+  );
+}
+.diff-lbls {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--mid);
+  font-variant-numeric: tabular-nums;
+}
