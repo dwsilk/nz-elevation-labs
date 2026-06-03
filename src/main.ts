@@ -805,7 +805,19 @@ function buildDiffBase(): void {
 function enterDiffMode(): void {
   teardownBase();
   buildDiffBase();
+  updateDiffZoomHint();
 }
+
+// LINZ DSM tiles aren't published below about z 7.5, so the diff layer is
+// effectively blank there. Surface a hint in the panel when that's the case.
+const DIFF_MIN_ZOOM = 7.5;
+function updateDiffZoomHint(): void {
+  const hint = document.getElementById('diff-zoom-hint');
+  if (!hint) return;
+  const show = activeTab === 'diff' && map.getZoom() < DIFF_MIN_ZOOM;
+  hint.classList.toggle('hidden', !show);
+}
+map.on('zoom', updateDiffZoomHint);
 
 // ── INSPECT MODE ──────────────────────────────────────────────────────────────
 
@@ -883,6 +895,7 @@ function switchTab(next: TabName): void {
   activeTab = next;
   setHashParam('mode', next === 'elevation' ? null : next);
   syncPresetHash();
+  updateDiffZoomHint();
 
   const enter = (): void => {
     if (prev === 'coverage') leaveCoverageMode();
