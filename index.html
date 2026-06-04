@@ -8,7 +8,12 @@
 <body>
 
 <header id="hdr" role="banner">
-  <span class="hdr-page">New Zealand Elevation Labs</span>
+  <a class="brand" href="https://www.linz.govt.nz" target="_blank" rel="noopener"
+     aria-label="Toitū Te Whenua Land Information New Zealand">
+    <img src="/linz-logo-white.png" alt="Toitū Te Whenua LINZ"/>
+  </a>
+  <div class="hdr-divider"></div>
+  <span class="hdr-page">Elevation Labs</span>
   <div class="hdr-sp"></div>
   <a class="hdr-a" href="https://basemaps.linz.govt.nz" target="_blank" rel="noopener">
     LINZ Basemaps
@@ -35,30 +40,52 @@
       <polyline points="9 18 15 12 9 6"/>
     </svg>
   </button>
-  <div id="pan-global">
-    <div class="sec-lbl">Dataset</div>
-    <div class="dem-dsm-toggle">
-      <button class="dsm-btn active" id="btn-dem">DEM</button>
-      <button class="dsm-btn" id="btn-dsm">DSM</button>
-    </div>
-    <p class="dsm-desc" id="dsm-desc">Digital Elevation Model — bare earth, vegetation and buildings removed.</p>
-    <div id="exag-wrap" class="hidden">
-      <div class="sl-wrap">
-        <div class="opt-row">
-          <label for="sl-exag">Vertical exaggeration</label>
-          <span class="sl-val" id="sl-exag-v">1.0x</span>
-        </div>
-        <input type="range" id="sl-exag" min="1" max="30" value="1" step="1"/>
-      </div>
-    </div>
+  <div class="pnl-head">
+    <h2 id="pnl-title">Colour ramp</h2>
   </div>
 
-  <div class="acc">
-    <!-- ── ELEVATION ── -->
-    <button class="acc-hdr active" data-tab="elevation" aria-expanded="true" aria-controls="tab-elevation">
-      <span>Colour Ramp</span>
-      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
+  <div class="panel-body">
+    <nav class="rail" role="tablist" aria-label="Mode">
+      <button class="rail-disc active" data-tab="elevation" aria-label="Colour ramp" title="Colour ramp">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7.5" width="18" height="9" rx="1"/><path d="M6 7.5v9M12 7.5v9M17 7.5v9"/></svg>
+      </button>
+      <button class="rail-disc" data-tab="hillshade" aria-label="Hillshade" title="Hillshade">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18l5-7 3.5 4.6 4-6L21 18"/><circle cx="18.6" cy="6" r="1.8"/></svg>
+      </button>
+      <button class="rail-disc" data-tab="contour" aria-label="Contours" title="Contours">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.8 13.6C3.8 7.9 7.6 4.4 12 4.4s8.2 2.9 8.2 8.6c0 2.2-.9 3.9-2.2 5.1"/><path d="M7.2 14.4c0-3.9 2-6.4 4.8-6.4s4.8 2.3 4.8 6c0 1.8-.9 3.1-2.2 3.7"/><path d="M10.4 15.1c0-2.2.7-3.5 1.9-3.5s1.9 1.2 1.6 2.9"/></svg>
+      </button>
+      <button class="rail-disc" data-tab="diff" aria-label="Difference" title="Difference">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M3 6h18" stroke-dasharray="3 2.6"/><path d="M12 9v8"/><path d="M9.5 11.5L12 9l2.5 2.5"/><path d="M9.5 14.5L12 17l2.5-2.5"/></svg>
+      </button>
+      <button class="rail-disc" data-tab="coverage" aria-label="Coverage" title="Coverage">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="1.5"/><path d="M12 4v16M4 12h16"/><rect x="5.1" y="5.1" width="5.8" height="5.8" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="rail-disc" data-tab="inspect" aria-label="Inspect" title="Inspect">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5"/><path d="M12 2v3.6M12 18.4V22M2 12h3.6M18.4 12H22"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
+      </button>
+      <button class="rail-disc" data-tab="export" aria-label="Export" title="Export">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5v10.5"/><path d="M8 10l4 4 4-4"/><path d="M5 16v3.5h14V16"/></svg>
+      </button>
+    </nav>
+    <div class="pnl-content">
+    <div id="pan-global">
+      <div class="sec-lbl">Dataset</div>
+      <div class="dem-dsm-toggle">
+        <button class="dsm-btn active" id="btn-dem">DEM</button>
+        <button class="dsm-btn" id="btn-dsm">DSM</button>
+      </div>
+      <p class="dsm-desc" id="dsm-desc">Digital Elevation Model — bare earth, vegetation and buildings removed.</p>
+      <div id="exag-wrap" class="hidden">
+        <div class="sl-wrap">
+          <div class="opt-row">
+            <label for="sl-exag">Vertical exaggeration</label>
+            <span class="sl-val" id="sl-exag-v">1.0x</span>
+          </div>
+          <input type="range" id="sl-exag" min="1" max="30" value="1" step="1"/>
+        </div>
+      </div>
+    </div>
     <div class="pan-body" id="tab-elevation">
     <div>
       <div class="sec-lbl">Presets</div>
@@ -101,11 +128,6 @@
     </p>
   </div>
 
-    <!-- ── HILLSHADE ── -->
-    <button class="acc-hdr" data-tab="hillshade" aria-expanded="false" aria-controls="tab-hillshade">
-      <span>Hillshade</span>
-      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
     <div class="pan-body hidden" id="tab-hillshade">
     <div>
       <div class="sec-lbl">Dynamic</div>
@@ -228,11 +250,6 @@
     </p>
   </div>
 
-    <!-- ── CONTOURS ── -->
-    <button class="acc-hdr" data-tab="contour" aria-expanded="false" aria-controls="tab-contour">
-      <span>Contours</span>
-      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
     <div class="pan-body hidden" id="tab-contour">
     <div>
       <div class="sec-lbl">Backdrop</div>
@@ -415,11 +432,6 @@
     </p>
   </div>
 
-    <!-- ── DIFFERENCE ── -->
-    <button class="acc-hdr" data-tab="diff" aria-expanded="false" aria-controls="tab-diff">
-      <span>Difference (DSM − DEM)</span>
-      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
     <div class="pan-body hidden" id="tab-diff">
       <p class="dsm-desc">Surface objects above bare earth — vegetation canopy and buildings — computed live from the DEM and DSM tile pair.</p>
 
@@ -449,11 +461,6 @@
       </p>
     </div>
 
-    <!-- ── COVERAGE ── -->
-    <button class="acc-hdr" data-tab="coverage" aria-expanded="false" aria-controls="tab-coverage">
-      <span>Coverage</span>
-      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
     <div class="pan-body hidden" id="tab-coverage">
     <div id="cov-age-section" class="hidden">
       <div class="sec-lbl">Survey age</div>
@@ -504,11 +511,6 @@
     </p>
   </div>
 
-    <!-- ── INSPECT ── -->
-    <button class="acc-hdr" data-tab="inspect" aria-expanded="false" aria-controls="tab-inspect">
-      <span>Inspect</span>
-      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
     <div class="pan-body hidden" id="tab-inspect">
       <p class="dsm-desc">Read elevations at a point, or draw a profile across the terrain.</p>
 
@@ -543,11 +545,6 @@
       </p>
     </div>
 
-    <!-- ── EXPORT ── -->
-    <button class="acc-hdr" data-tab="export" aria-expanded="false" aria-controls="tab-export">
-      <span>Export</span>
-      <svg class="acc-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 6 15 12 9 18"/></svg>
-    </button>
     <div class="pan-body hidden" id="tab-export">
       <p class="dsm-desc">Click a tile on the map to download its GeoTIFF.</p>
 
@@ -569,12 +566,14 @@
         Cloud-Optimized GeoTIFFs hosted by LINZ · CC BY 4.0
       </p>
     </div>
+    </div>
   </div>
 </aside>
 
 <footer id="ftr" role="contentinfo">
-  <div class="ftr-sp"></div>
   <span class="ftr-attr">Powered by MapLibre GL JS 5 · Tiles © LINZ CC BY 4.0</span>
+  <div class="ftr-sp"></div>
+  <span class="ftr-gov"><img src="/nz-government-logo.png" alt="New Zealand Government"/></span>
 </footer>
 
 <script type="module" src="/src/main.ts"></script>

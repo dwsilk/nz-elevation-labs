@@ -881,17 +881,30 @@ el<HTMLSelectElement>('sel-ct-backdrop').addEventListener('change', e => {
   if (activeTab === 'contour') applyContourBackdrop(bd);
 });
 
+// Sentence-case titles shown in the panel header — driven by the active rail disc.
+const TAB_TITLES: Record<TabName, string> = {
+  elevation: 'Colour ramp',
+  hillshade: 'Hillshade',
+  contour:   'Contours',
+  diff:      'Difference',
+  coverage:  'Coverage',
+  inspect:   'Inspect',
+  export:    'Export',
+};
+
 function switchTab(next: TabName): void {
   const prev = activeTab;
   if (prev === next) return;
 
-  document.querySelectorAll<HTMLElement>('.acc-hdr').forEach(t => {
+  document.querySelectorAll<HTMLElement>('.rail-disc').forEach(t => {
     const on = t.dataset['tab'] === next;
     t.classList.toggle('active', on);
-    t.setAttribute('aria-expanded', String(on));
+    t.setAttribute('aria-pressed', String(on));
   });
   document.querySelectorAll('.pan-body').forEach(b => b.classList.add('hidden'));
   document.getElementById(`tab-${next}`)?.classList.remove('hidden');
+  const title = document.getElementById('pnl-title');
+  if (title) title.textContent = TAB_TITLES[next];
   activeTab = next;
   setHashParam('mode', next === 'elevation' ? null : next);
   syncPresetHash();
@@ -915,8 +928,8 @@ function switchTab(next: TabName): void {
   else map.once('load', enter);
 }
 
-document.querySelectorAll<HTMLButtonElement>('.acc-hdr').forEach(hdr => {
-  hdr.addEventListener('click', () => switchTab(hdr.dataset['tab'] as TabName));
+document.querySelectorAll<HTMLButtonElement>('.rail-disc').forEach(disc => {
+  disc.addEventListener('click', () => switchTab(disc.dataset['tab'] as TabName));
 });
 
 // Apply view state encoded in the URL hash. Camera is restored automatically by

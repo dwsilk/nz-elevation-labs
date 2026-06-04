@@ -11,7 +11,7 @@
 /* ── PANEL TOGGLE TAB ── */
 #panel-toggle {
   position: absolute; top: 12px; left: -24px;
-  width: 24px; height: 40px;
+  width: 24px; height: 72px;
   background: #fff; border: 1px solid var(--bdr); border-right: none;
   border-radius: 6px 0 0 6px;
   cursor: pointer; display: flex; align-items: center; justify-content: center;
@@ -31,28 +31,42 @@
 #pan-global .sec-lbl { margin-bottom: 0; }
 #pan-global .dem-dsm-toggle { margin-bottom: 0; }
 
-/* ── ACCORDION ── */
-.acc { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-
-.acc-hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  width: 100%; padding: 11px 15px;
-  font-family: var(--font); font-size: 12px; font-weight: 500;
-  color: var(--mid); background: #fff; border: none;
+/* ── PANEL HEADER (sentence-case active-mode title) ── */
+.pnl-head {
+  background: var(--blue-lt);
   border-bottom: 1px solid var(--bdr);
-  cursor: pointer; text-align: left;
-  transition: color .15s, background .15s;
+  padding: 12px 16px;
 }
-.acc-hdr:hover { color: var(--navy); background: var(--blue-lt); }
-.acc-hdr.active { color: var(--navy); background: var(--blue-lt); font-weight: 600; }
-
-.acc-chev {
-  width: 11px; height: 11px; flex-shrink: 0;
-  transition: transform .2s ease;
+.pnl-head h2 {
+  font-family: var(--font);
+  font-size: 16px; font-weight: 700; color: var(--navy);
+  letter-spacing: -.01em;
 }
-.acc-hdr.active .acc-chev { transform: rotate(90deg); }
 
-.pan-body { flex: 1; overflow-y: auto; padding: 14px 15px; display: flex; flex-direction: column; gap: 16px; }
+/* ── PANEL BODY: rail on the left, scrolling content on the right ── */
+.panel-body { flex: 1; display: flex; min-height: 0; }
+
+.rail {
+  width: 58px; flex-shrink: 0;
+  padding: 12px 0;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  border-right: 1px solid var(--bdr);
+  background: #fff;
+}
+.rail-disc {
+  width: 42px; height: 42px; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; border-radius: 50%;
+  color: var(--mid); cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.rail-disc:hover { background: var(--blue-lt); color: var(--navy); }
+.rail-disc.active { background: var(--blue); color: #fff; }
+.rail-disc.active:hover { background: var(--blue); }
+
+.pnl-content { flex: 1; overflow-y: auto; min-width: 0; }
+
+.pan-body { padding: 14px 15px; display: flex; flex-direction: column; gap: 16px; }
 .pan-hd { background: var(--blue-lt); border-bottom: 1px solid var(--bdr); padding: 13px 15px 11px; }
 .pan-hd h2 { font-size: 12px; font-weight: 600; color: var(--navy); text-transform: uppercase; letter-spacing: .06em; }
 .pan-hd p { font-size: 11px; color: var(--mid); margin-top: 2px; line-height: 1.4; }
@@ -72,6 +86,7 @@
 }
 .pre-btn:hover { border-color: var(--blue); transform: translateY(-1px); }
 .pre-btn.active { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(0,100,200,.18); }
+.pre-btn.active .pre-lbl { color: var(--blue); font-weight: 700; }
 .pre-sw { height: 26px; width: 100%; display: block; }
 .pre-lbl { font-size: 10px; font-weight: 500; padding: 3px 6px; color: #333; background: #f8f9fa; display: block; text-align: left; }
 
@@ -156,7 +171,7 @@
   transition: background .15s, color .15s;
 }
 .dsm-btn:not(:last-child) { border-right: 1.5px solid var(--bdr); }
-.dsm-btn.active { background: var(--navy); color: #fff; }
+.dsm-btn.active { background: var(--blue); color: #fff; }
 .dsm-btn:not(.active):hover { background: var(--blue-lt); }
 .dsm-desc { font-size: 10px; color: var(--mid); line-height: 1.5; }
 

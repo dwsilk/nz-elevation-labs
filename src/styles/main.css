@@ -1,19 +1,43 @@
+/* ============================================================
+   main.css — LINZ design-system alignment
+   Patched from the original nz-elevation-labs main.css.
+   Changes are marked with  ◀ LINZ  comments.
+   Drop-in replacement for src/styles/main.css
+   ============================================================ */
+
 @import 'maplibre-gl/dist/maplibre-gl.css';
-@import url('https://fonts.googleapis.com/css?family=Fira+Sans:300,400,500,600&display=swap');
+/* ◀ LINZ: Open Sans (linz.govt.nz digital face) replaces Fira Sans */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --navy: #00335b;
-  --blue: #0064c8;
-  --blue-lt: #e8f0f5;
-  --footer: #0d1b2a;
-  --bdr: #ccd8e0;
-  --mid: #4a6278;
-  --font: 'Fira Sans', 'Open Sans', sans-serif;
+  /* ◀ LINZ brand tokens (from Toitū Te Whenua guidelines) */
+  --moana-dark:   #00425d;
+  --moana-medium: #007198;
+  --moana-bright: #0096cc;
+  --moana-light:  #73c8e1;
+  --moana-pale:   #e2f3f7;
+  --awa-bright:   #00a599;
+  --whatu-dark:   #414042;
+  --whatu-medium: #67635c;
+  --whatu-light:  #b7b2ad;
+  --whatu-pale:   #ecebe8;
+
+  /* ◀ LINZ: existing app variables re-pointed onto the tokens.
+     Everything in panel.css / coverage.css / diff.css / etc. inherits
+     the new palette automatically — no edits needed in those files. */
+  --navy:   var(--moana-dark);     /* header, segmented active, 3D button */
+  --blue:   var(--moana-dark);     /* accent collapsed onto Moana dark */
+  --blue-lt: var(--moana-pale);
+  --footer: var(--moana-dark);
+  --bdr:    #d8d6d2;
+  --mid:    var(--whatu-medium);
+  --font:   'Open Sans', 'Segoe UI', system-ui, -apple-system, sans-serif;
+
   --hh: 58px;
   --fh: 48px;
-  --pw: 330px;
+  --pw: 390px;
 }
 
 html, body {
@@ -21,25 +45,33 @@ html, body {
   overflow: hidden;
   font-family: var(--font);
   font-size: 14px;
+  color: var(--whatu-dark); /* ◀ LINZ: warm near-black body copy, not pure #000 */
 }
 
 /* ── HEADER ── */
 #hdr {
   position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
   height: var(--hh); background: var(--navy);
-  display: flex; align-items: center; padding: 0 18px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.4);
+  display: flex; align-items: center; gap: 16px;            /* ◀ LINZ: gap */
+  padding: 0 20px;
+  box-shadow: 0 2px 10px rgba(0,66,93,.30);                 /* ◀ LINZ: blue-tinted shadow */
 }
-.hdr-page { font-size: 13px; color: rgba(255,255,255,.7); font-weight: 300; }
+/* ◀ LINZ: logo lockup, top-left (white reversed logo on the dark bar) */
+#hdr .brand { display: flex; align-items: center; flex-shrink: 0; text-decoration: none; }
+#hdr .brand img { height: 34px; display: block; }
+#hdr .hdr-divider { width: 1px; height: 28px; background: rgba(255,255,255,.18); flex-shrink: 0; }
+
+.hdr-page { font-size: 15px; color: #fff; font-weight: 700; letter-spacing: -.01em; } /* ◀ LINZ */
 .hdr-sp { flex: 1; }
 .hdr-a {
-  font-size: 12px; color: rgba(255,255,255,.6); text-decoration: none;
-  padding: 5px 9px; border-radius: 3px;
-  display: flex; align-items: center; gap: 5px;
+  font-size: 13px; color: rgba(255,255,255,.78); text-decoration: none; /* ◀ LINZ */
+  padding: 7px 11px; border-radius: 4px; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
   transition: color .15s, background .15s;
+  font-weight: 600;
 }
-.hdr-a:hover { color: #fff; background: rgba(255,255,255,.1); }
-.hdr-a svg { width: 13px; height: 13px; }
+.hdr-a:hover { color: #fff; background: rgba(255,255,255,.12); }
+.hdr-a svg { width: 14px; height: 14px; }
 
 /* ── MAP ── */
 #map-wrap {
@@ -50,16 +82,15 @@ html, body {
 #map-wrap.panel-hidden { right: 0; }
 #map { width: 100%; height: 100%; }
 
-
 /* ── 3D BUTTON ── */
 #btn-3d {
   display: block; width: 29px; height: 29px; padding: 0;
   background: rgba(255,255,255,0.92); border: none;
   cursor: pointer; font-family: var(--font); font-size: 12px;
-  font-weight: 700; color: #333; line-height: 29px; text-align: center;
+  font-weight: 700; color: var(--whatu-dark); line-height: 29px; text-align: center; /* ◀ LINZ */
   transition: background .15s, color .15s;
 }
-#btn-3d:hover { background: #f0f0f0; }
+#btn-3d:hover { background: var(--blue-lt); }                /* ◀ LINZ */
 #btn-3d:not(.active) { border-radius: 4px; }
 #btn-3d.active { background: var(--navy); color: #fff; }
 .maplibregl-ctrl-group:has(#btn-3d) { border-radius: 4px !important; overflow: visible !important; }
@@ -68,11 +99,15 @@ html, body {
 #ftr {
   position: fixed; bottom: 0; left: 0; right: 0; z-index: 1000;
   height: var(--fh); background: var(--footer);
-  border-top: 1px solid rgba(255,255,255,.06);
-  display: flex; align-items: center; padding: 0 18px; gap: 18px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  display: flex; align-items: center; padding: 0 20px; gap: 16px;
 }
 .ftr-sp { flex: 1; }
-.ftr-attr { font-size: 10px; color: rgba(255,255,255,.25); }
+.ftr-attr { font-size: 11px; color: rgba(255,255,255,.6); }  /* ◀ LINZ: was .25, lift for AA */
+.ftr-attr a { color: rgba(255,255,255,.82); }
+/* ◀ LINZ: NZ Government logo, bottom-right of the footer (guidelines requirement) */
+.ftr-gov { display: flex; align-items: center; flex-shrink: 0; }
+.ftr-gov img { height: 26px; filter: brightness(0) invert(1); opacity: .9; display: block; }
 
 /* ── MAPLIBRE OVERRIDES ── */
 .maplibregl-ctrl-attrib { font-size: 10px !important; }
@@ -84,9 +119,15 @@ html, body {
   z-index: 800;
   background: var(--navy); color: #fff;
   padding: 9px 16px; border-radius: 999px;
-  font-family: var(--font); font-size: 13px; font-weight: 500;
-  box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  font-family: var(--font); font-size: 13px; font-weight: 600;       /* ◀ LINZ: 600 */
+  box-shadow: 0 4px 14px rgba(0,66,93,.25);                          /* ◀ LINZ */
   pointer-events: none; white-space: nowrap;
+}
+
+/* ◀ LINZ: accessible focus ring (Moana bright, 2px offset) */
+:where(button, a, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--moana-bright);
+  outline-offset: 2px;
 }
 
 /* ── UTILITY ── */
