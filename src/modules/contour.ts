@@ -134,7 +134,13 @@ export function removeContourLayers(): void {
 }
 
 export function addContourLayers(): void {
-  if (!_map?.loaded()) return;
+  // `map.loaded()` is false while any source is still loading tiles; we only
+  // need the style to be parsed to call addSource / addLayer, so check
+  // isStyleLoaded() instead. The previous check made addContourLayers bail
+  // silently when called immediately after a base rebuild (entering the
+  // contour mode), so contours wouldn't appear until a preset click kicked
+  // addContourLayers a second time, after the new base tiles had settled.
+  if (!_map?.isStyleLoaded()) return;
   removeContourLayers();
 
   demSource = new mlcontour.DemSource({

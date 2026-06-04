@@ -863,7 +863,12 @@ function enterContourMode(): void {
   teardownBase();
   buildContourBase();
   applyContourBackdrop(contourBackdrop);
-  addContourLayers();
+  // Defer until the freshly-rebuilt base sources have settled. Adding the
+  // contour vector source mid-base-rebuild silently fails to request its
+  // first tiles.
+  map.once('idle', () => {
+    if (activeTab === 'contour') addContourLayers();
+  });
 }
 
 let hsPreviewed = false;
