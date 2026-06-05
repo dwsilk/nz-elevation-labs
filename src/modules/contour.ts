@@ -49,7 +49,7 @@ export const CT_PRESETS: Record<string, ContourPreset> = {
       minorColor: '#999999', majorColor: '#444444',
       minorWidth: 1, majorWidth: 2, opacity: 0.8,
       labelColor: '#333333', textSize: 11, labelOpacity: 0.9,
-      font: 'Noto Sans Bold', placement: 'line',
+      font: 'Open Sans Bold', placement: 'line',
       haloColor: '#ffffff', haloWidth: 2, haloBlur: 0, showLabels: true,
     },
   },
@@ -59,7 +59,7 @@ export const CT_PRESETS: Record<string, ContourPreset> = {
       minorColor: '#c8a06e', majorColor: '#b07830',
       minorWidth: 1, majorWidth: 2, opacity: 0.9,
       labelColor: '#7a4a10', textSize: 10, labelOpacity: 1.0,
-      font: 'Noto Sans Regular', placement: 'line',
+      font: 'Open Sans Regular', placement: 'line',
       haloColor: '#f0e8d0', haloWidth: 2, haloBlur: 0.5, showLabels: true,
     },
   },
@@ -69,7 +69,7 @@ export const CT_PRESETS: Record<string, ContourPreset> = {
       minorColor: '#cccccc', majorColor: '#ffffff',
       minorWidth: 1, majorWidth: 2, opacity: 0.9,
       labelColor: '#ffffff', textSize: 11, labelOpacity: 0.95,
-      font: 'Noto Sans Bold', placement: 'line',
+      font: 'Open Sans Bold', placement: 'line',
       haloColor: '#000000', haloWidth: 2, haloBlur: 0.5, showLabels: true,
     },
   },
@@ -79,7 +79,7 @@ export const CT_PRESETS: Record<string, ContourPreset> = {
       minorColor: '#80dfff', majorColor: '#00c8ff',
       minorWidth: 1, majorWidth: 2, opacity: 0.9,
       labelColor: '#00c8ff', textSize: 11, labelOpacity: 0.95,
-      font: 'Noto Sans Bold', placement: 'line',
+      font: 'Open Sans Bold', placement: 'line',
       haloColor: '#000000', haloWidth: 2, haloBlur: 0.5, showLabels: true,
     },
   },
@@ -95,7 +95,14 @@ let demSource: InstanceType<typeof mlcontour.DemSource> | null = null;
 let _map: MaplibreMap | null = null;
 let _activeSrc: DemDsm = 'dem';
 
-export function setActiveSrc(src: DemDsm): void { _activeSrc = src; }
+export function setActiveSrc(src: DemDsm): void {
+  if (_activeSrc === src) return;
+  _activeSrc = src;
+  // If contours are currently mounted, rebuild with the new DEM source URL
+  // so the lines actually reflect the chosen dataset. Otherwise the next
+  // addContourLayers (mode entry / preset click) will pick it up.
+  if (ctLayers.length > 0) addContourLayers();
+}
 
 // ── CONFIG READER ─────────────────────────────────────────────────────────────
 
@@ -106,15 +113,19 @@ function el<T extends HTMLElement>(id: string): T {
 }
 
 function getCtConfig(): ContourConfig {
+  // The master "Layer opacity" multiplies through both the per-line and the
+  // per-label opacity sliders, so dragging it fades the whole contour layer
+  // proportionally while the per-line / per-label sliders stay meaningful.
+  const layerOp = Number((el<HTMLInputElement>('ct-layer-opacity')).value) / 100;
   return {
     minorColor:   (el<HTMLInputElement>('ct-minor-color')).value,
     majorColor:   (el<HTMLInputElement>('ct-major-color')).value,
     minorWidth:   Number((el<HTMLInputElement>('ct-minor-width')).value),
     majorWidth:   Number((el<HTMLInputElement>('ct-major-width')).value),
-    opacity:      Number((el<HTMLInputElement>('ct-opacity')).value) / 100,
+    opacity:      (Number((el<HTMLInputElement>('ct-opacity')).value) / 100) * layerOp,
     labelColor:   (el<HTMLInputElement>('ct-label-color')).value,
     textSize:     Number((el<HTMLInputElement>('ct-text-size')).value),
-    labelOpacity: Number((el<HTMLInputElement>('ct-label-opacity')).value) / 100,
+    labelOpacity: (Number((el<HTMLInputElement>('ct-label-opacity')).value) / 100) * layerOp,
     placement:    (el<HTMLSelectElement>('sel-ct-placement')).value as 'line' | 'line-center',
     font:         (el<HTMLSelectElement>('sel-ct-font')).value,
     haloColor:    (el<HTMLInputElement>('ct-halo-color')).value,
@@ -205,9 +216,6 @@ export function addContourLayers(): void {
   });
 
   ctLayers = ['contour-lines-minor', 'contour-lines-major', 'contour-labels'];
-
-  const vis = el<HTMLInputElement>('tog-contour').checked ? 'visible' : 'none';
-  ctLayers.forEach(id => _map!.setLayoutProperty(id, 'visibility', vis));
 }
 
 export function updateContourPaint(): void {
@@ -324,11 +332,6 @@ export function applyCtPreset(name: string): void {
 export function initContourControls(map: MaplibreMap): void {
   _map = map;
 
-  el<HTMLInputElement>('tog-contour').addEventListener('change', e => {
-    const vis = (e.target as HTMLInputElement).checked ? 'visible' : 'none';
-    ctLayers.forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', vis); });
-  });
-
   el<HTMLInputElement>('tog-ct-labels').addEventListener('change', updateContourPaint);
 
   (['ct-minor-color', 'ct-major-color', 'ct-label-color', 'ct-halo-color'] as const).forEach(id => {
@@ -338,7 +341,8 @@ export function initContourControls(map: MaplibreMap): void {
     });
   });
 
-  ([ ['ct-minor-width',   'ct-minor-width-v',   (v: string) => v + 'px'],
+  ([ ['ct-layer-opacity', 'ct-layer-opacity-v', (v: string) => v + '%'],
+     ['ct-minor-width',   'ct-minor-width-v',   (v: string) => v + 'px'],
      ['ct-major-width',   'ct-major-width-v',   (v: string) => v + 'px'],
      ['ct-opacity',       'ct-opacity-v',       (v: string) => v + '%'],
      ['ct-text-size',     'ct-text-size-v',     (v: string) => v + 'px'],

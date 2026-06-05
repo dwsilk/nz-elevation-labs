@@ -550,7 +550,7 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
         id: COV_LABELS, type: 'symbol', source: COV_SOURCE,
         layout: {
           'text-field': ['get', 'year_label'],
-          'text-font': ['Noto Sans Bold'],
+          'text-font': ['Open Sans Bold'],
           'text-size': ['interpolate', ['linear'], ['zoom'], 8, 9, 12, 12],
           'text-anchor': 'center',
           'text-max-width': 8,

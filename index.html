@@ -91,6 +91,13 @@
       <div class="sec-lbl">Presets</div>
       <div class="presets" id="presets"></div>
     </div>
+    <div class="sl-wrap">
+      <div class="opt-row">
+        <label for="sl-op">Layer opacity</label>
+        <span class="sl-val" id="sl-op-v">100%</span>
+      </div>
+      <input type="range" id="sl-op" min="0" max="100" value="100" step="1"/>
+    </div>
     <div>
       <div class="sec-lbl">Colour stops</div>
       <div class="stop-list" id="stop-list"></div>
@@ -103,25 +110,6 @@
         <div id="ramp-handles"></div>
       </div>
       <div class="ramp-lbls"><span id="ramp-lbl-lo">0 m</span><span id="ramp-lbl-hi">3000 m</span></div>
-    </div>
-    <div>
-      <div class="sec-lbl">Options</div>
-      <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="sl-wrap">
-          <div class="opt-row">
-            <label for="sl-op">Colour ramp opacity</label>
-            <span class="sl-val" id="sl-op-v">100%</span>
-          </div>
-          <input type="range" id="sl-op" min="0" max="100" value="100" step="1"/>
-        </div>
-        <div class="opt-row">
-          <label for="tog-elev-hs">Igor hillshade backdrop</label>
-          <label class="tog" style="margin-left:auto;flex-shrink:0">
-            <input type="checkbox" id="tog-elev-hs" checked/>
-            <span class="tog-sl"></span>
-          </label>
-        </div>
-      </div>
     </div>
     <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
       Elevation © <a href="https://basemaps.linz.govt.nz" style="color:#bbb" target="_blank" rel="noopener">LINZ Basemaps</a> · terrain-RGB · CC BY 4.0
@@ -182,6 +170,14 @@
       </div>
     </div>
 
+    <div class="sl-wrap">
+      <div class="opt-row">
+        <label for="sl-hs" id="sl-hs-label">Exaggeration</label>
+        <span class="sl-val" id="sl-hs-v">0.5</span>
+      </div>
+      <input type="range" id="sl-hs" min="0" max="10" value="5" step="1"/>
+    </div>
+
     <div id="hs-terrain-illumination">
       <div class="sec-lbl">Illumination</div>
       <div style="display:flex;flex-direction:column;gap:10px">
@@ -234,31 +230,12 @@
       </div>
     </div>
 
-    <div>
-      <div class="sec-lbl">Intensity</div>
-      <div class="sl-wrap">
-        <div class="opt-row">
-          <label for="sl-hs" id="sl-hs-label">Exaggeration</label>
-          <span class="sl-val" id="sl-hs-v">0.5</span>
-        </div>
-        <input type="range" id="sl-hs" min="0" max="10" value="5" step="1"/>
-      </div>
-    </div>
-
     <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
       Hillshade via MapLibre terrain tile rendering or pre-computed <a href="https://basemaps.linz.govt.nz" style="color:#bbb" target="_blank" rel="noopener">LINZ Basemaps</a> rasters · CC BY 4.0
     </p>
   </div>
 
     <div class="pan-body hidden" id="tab-contour">
-    <div>
-      <div class="sec-lbl">Backdrop</div>
-      <select id="sel-ct-backdrop" class="hs-select">
-        <option value="igor-dem">Igor Hillshade — DEM</option>
-        <option value="igor-dsm">Igor Hillshade — DSM</option>
-        <option value="aerial">Aerial Imagery</option>
-      </select>
-    </div>
     <div>
       <div class="sec-lbl">Presets</div>
       <div class="presets">
@@ -305,16 +282,14 @@
       </div>
     </div>
 
-    <div>
-      <div class="sec-lbl">Contour lines</div>
-      <div class="opt-row" style="margin-bottom:4px">
-        <label for="tog-contour">Enable contours</label>
-        <label class="tog" style="margin-left:auto;flex-shrink:0">
-          <input type="checkbox" id="tog-contour" checked/>
-          <span class="tog-sl"></span>
-        </label>
+    <div class="sl-wrap">
+      <div class="opt-row">
+        <label for="ct-layer-opacity">Layer opacity</label>
+        <span class="sl-val" id="ct-layer-opacity-v">100%</span>
       </div>
+      <input type="range" id="ct-layer-opacity" min="0" max="100" value="100" step="1"/>
     </div>
+
 
     <div>
       <div class="sec-lbl">Zoom thresholds</div>
@@ -395,9 +370,9 @@
         <div class="sl-wrap">
           <div class="opt-row"><label for="sel-ct-font">Font</label></div>
           <select id="sel-ct-font" class="hs-select">
-            <option value="Noto Sans Bold">Noto Sans Bold</option>
-            <option value="Noto Sans Regular">Noto Sans Regular</option>
-            <option value="Noto Sans Italic">Noto Sans Italic</option>
+            <option value="Open Sans Bold">Open Sans Bold</option>
+            <option value="Open Sans Regular">Open Sans Regular</option>
+            <option value="Open Sans Semi Bold Italic">Open Sans Semi Bold Italic</option>
           </select>
         </div>
       </div>
@@ -445,15 +420,12 @@
         </div>
       </div>
 
-      <div>
-        <div class="sec-lbl">Options</div>
-        <div class="sl-wrap">
-          <div class="opt-row">
-            <label for="sl-diff-op">Layer opacity</label>
-            <span class="sl-val" id="sl-diff-op-v">90%</span>
-          </div>
-          <input type="range" id="sl-diff-op" min="0" max="100" value="90" step="1"/>
+      <div class="sl-wrap">
+        <div class="opt-row">
+          <label for="sl-diff-op">Layer opacity</label>
+          <span class="sl-val" id="sl-diff-op-v">90%</span>
         </div>
+        <input type="range" id="sl-diff-op" min="0" max="100" value="90" step="1"/>
       </div>
 
       <p style="font-size:10px;color:#bbb;line-height:1.5;padding-bottom:4px">
@@ -469,6 +441,14 @@
       <div class="ramp-lbls"><span id="cov-age-oldest"></span><span id="cov-age-newest"></span></div>
     </div>
 
+    <div class="sl-wrap">
+      <div class="opt-row">
+        <label for="cov-opacity">Layer opacity</label>
+        <span class="sl-val" id="cov-opacity-v">90%</span>
+      </div>
+      <input type="range" id="cov-opacity" min="0" max="100" value="90" step="1"/>
+    </div>
+
     <div id="cov-detail" class="cov-detail hidden">
       <div class="sec-lbl">Selected survey</div>
       <div class="cov-detail-inner" id="cov-detail-inner"></div>
@@ -478,13 +458,6 @@
     <div>
       <div class="sec-lbl">Options</div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <div class="sl-wrap">
-          <div class="opt-row">
-            <label for="cov-opacity">Fill opacity</label>
-            <span class="sl-val" id="cov-opacity-v">90%</span>
-          </div>
-          <input type="range" id="cov-opacity" min="0" max="100" value="90" step="1"/>
-        </div>
         <div class="opt-row">
           <label for="tog-cov-labels">Show labels</label>
           <label class="tog" style="margin-left:auto;flex-shrink:0">

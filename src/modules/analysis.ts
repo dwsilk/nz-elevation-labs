@@ -20,9 +20,9 @@
  * tile and can keep the layer's paint config trivial.
  */
 import maplibregl, { type AddProtocolAction } from 'maplibre-gl';
-import { ANALYSIS_PROTOCOL, ELEV_URL, DSM_URL, type DemDsm } from './config.js';
+import { ANALYSIS_PROTOCOL, type DemDsm } from './config.js';
+import { getDemHeights, DEM_TILE_SIZE as TILE_SIZE } from './dem-cache.js';
 
-const TILE_SIZE = 256;
 const PAD = TILE_SIZE + 2; // 258 — center tile plus 1-pixel apron on each side
 const EARTH_CIRC_M = 40075016.686;
 
@@ -36,9 +36,6 @@ export function registerAnalysisProtocol(): void {
 
 // Final-output cache. Promise-valued so concurrent requests dedupe.
 const _cache = new Map<string, Promise<ArrayBuffer>>();
-// Decoded-heights cache, capped to bound memory (~ 25 MB at 100 entries).
-const _heightsCache = new Map<string, Promise<Float32Array | null>>();
-const HEIGHTS_CACHE_MAX = 100;
 
 const analysisHandler: AddProtocolAction = async (req, abort) => {
   const m = req.url.match(/^analysis-png:\/\/(slope|aspect)\/(dem|dsm)\/(\d+)\/(\d+)\/(\d+)$/);
@@ -65,16 +62,16 @@ async function computeTile(
   z: number, x: number, y: number,
   abort: AbortController,
 ): Promise<ArrayBuffer> {
-  const center = await getHeights(src, z, x, y, abort);
+  const center = await getDemHeights(src, z, x, y, abort);
   if (!center) return transparentTile();
 
   // Fetch four cardinal neighbours in parallel. Any of them may legitimately
   // not exist (NZ edge, world edge) — we fall back to clamping at those edges.
   const [n, s, w, e] = await Promise.all([
-    getHeights(src, z, x,     y - 1, abort).catch(() => null),
-    getHeights(src, z, x,     y + 1, abort).catch(() => null),
-    getHeights(src, z, x - 1, y,     abort).catch(() => null),
-    getHeights(src, z, x + 1, y,     abort).catch(() => null),
+    getDemHeights(src, z, x,     y - 1, abort).catch(() => null),
+    getDemHeights(src, z, x,     y + 1, abort).catch(() => null),
+    getDemHeights(src, z, x - 1, y,     abort).catch(() => null),
+    getDemHeights(src, z, x + 1, y,     abort).catch(() => null),
   ]);
   const padded = buildPadded(center, n, s, w, e);
 
@@ -92,43 +89,6 @@ async function computeTile(
 
   const outBlob = await canvas.convertToBlob({ type: 'image/png' });
   return outBlob.arrayBuffer();
-}
-
-// Decode one DEM tile to a 256×256 Float32 heights array, with simple LRU.
-function getHeights(src: DemDsm, z: number, x: number, y: number, abort: AbortController): Promise<Float32Array | null> {
-  const key = `${src}/${z}/${x}/${y}`;
-  const hit = _heightsCache.get(key);
-  if (hit) return hit;
-  const p = decodeHeights(src, z, x, y, abort);
-  _heightsCache.set(key, p);
-  if (_heightsCache.size > HEIGHTS_CACHE_MAX) {
-    const oldest = _heightsCache.keys().next().value;
-    if (oldest !== undefined) _heightsCache.delete(oldest);
-  }
-  // Drop on failure so a subsequent call retries.
-  p.catch(() => _heightsCache.delete(key));
-  return p;
-}
-
-async function decodeHeights(src: DemDsm, z: number, x: number, y: number, abort: AbortController): Promise<Float32Array | null> {
-  const tileUrl = (src === 'dsm' ? DSM_URL : ELEV_URL)
-    .replace('{z}', String(z))
-    .replace('{x}', String(x))
-    .replace('{y}', String(y));
-  const res = await fetch(tileUrl, { signal: abort.signal });
-  if (!res.ok) return null;
-  const blob = await res.blob();
-  const img = await createImageBitmap(blob);
-  const canvas = new OffscreenCanvas(TILE_SIZE, TILE_SIZE);
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('OffscreenCanvas 2D context unavailable');
-  ctx.drawImage(img, 0, 0);
-  const enc = ctx.getImageData(0, 0, TILE_SIZE, TILE_SIZE).data;
-  const heights = new Float32Array(TILE_SIZE * TILE_SIZE);
-  for (let i = 0, p = 0; i < enc.length; i += 4, p++) {
-    heights[p] = (enc[i]! * 65536 + enc[i+1]! * 256 + enc[i+2]!) * 0.1 - 10000;
-  }
-  return heights;
 }
 
 // Build a 258×258 padded heights array: centre tile plus a 1-pixel apron from

@@ -22,11 +22,14 @@
 #panel-toggle svg { width: 14px; height: 14px; transition: transform .28s; }
 #panel.collapsed #panel-toggle svg { transform: rotate(180deg); }
 
-/* ── GLOBAL CONTROLS ── */
+/* ── GLOBAL CONTROLS (Whatu-pale band — subdued tint between the blue
+   panel header and the white body, so the dataset row reads as a
+   distinct "global controls" surface without going full dark mode) ── */
 #pan-global {
   padding: 12px 15px 10px;
-  border-bottom: 1px solid var(--bdr);
   display: flex; flex-direction: column; gap: 8px;
+  background: var(--whatu-pale);
+  border-bottom: 1px solid var(--bdr);
 }
 #pan-global .sec-lbl { margin-bottom: 0; }
 #pan-global .dem-dsm-toggle { margin-bottom: 0; }

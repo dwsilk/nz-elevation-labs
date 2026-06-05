@@ -1,23 +1,22 @@
 /**
  * Inspect tab — spot-elevation reader + profile / transect tool.
  *
- * Reads elevations via `map.queryTerrainElevation`, which only works when
- * MapLibre's terrain is enabled. While this panel is active we silently
- * enable terrain (at exaggeration 1 — pitch is still 0 so the visual is
- * unchanged) so queries succeed regardless of the user's explicit 3D toggle,
- * then restore the previous terrain state on leave.
- *
- * `queryTerrainElevation` returns elevation × current exaggeration, so we
- * normalise back to real metres in `queryElevation`.
+ * Reads elevations from terrain-RGB DEM tiles fetched and decoded by the
+ * shared dem-cache module. No MapLibre terrain state is touched.
  *
  * Spot tool: panel is always visible and updates lat / lng / elevation live
- * from the mouse cursor. A click pins the position with a marker; subsequent
- * mouse moves don't change the display until "Clear" is pressed.
+ * from the mouse cursor. The live readout is synchronous against the
+ * dem-cache — for the first mouse position over a tile that isn't yet cached
+ * the readout shows `—` while the fetch warms in the background; the next
+ * mousemove inside that tile is instant. A click pins the position with a
+ * marker; subsequent mouse moves don't change the display until "Clear" is
+ * pressed.
  *
  * Profile tool: two clicks define a great-circle-ish line; we sample N
- * elevations along it, draw an SVG chart with 100 m gridlines + adaptively
- * spaced labels, and let the user hover the chart to highlight the
- * corresponding map location plus see the live elevation under the cursor.
+ * elevations along it (awaiting tile fetches the first time), draw an SVG
+ * chart with 100 m gridlines + adaptively spaced labels, and let the user
+ * hover the chart to highlight the corresponding map location plus see the
+ * live elevation under the cursor.
  *
  * Selecting one tool clears the other's on-map state (marker / line).
  */
@@ -25,7 +24,8 @@ import maplibregl, {
   type Map as MaplibreMap, type LngLat, type LngLatLike, type Marker, type GeoJSONSource,
 } from 'maplibre-gl';
 import type { FeatureCollection, LineString } from 'geojson';
-import { INSPECT_LINE_SOURCE, INSPECT_LINE_LAYER, INSPECT_PROFILE_SAMPLES } from './config.js';
+import { INSPECT_LINE_SOURCE, INSPECT_LINE_LAYER, INSPECT_PROFILE_SAMPLES, type DemDsm } from './config.js';
+import { demHeightAt, demHeightAtAsync } from './dem-cache.js';
 
 type Tool = 'spot' | 'profile';
 
@@ -46,8 +46,11 @@ let _profileEndMarker: Marker | null = null;
 let _profileHoverMarker: Marker | null = null;
 let _profileSamples: Array<{ lng: number; lat: number; elev: number | null; distM: number }> = [];
 
-// Terrain state we silently overrode (so we can restore on leave).
-let _silentlyEnabledTerrain = false;
+// Active DEM/DSM dataset — updated by main.ts via setInspectActiveSrc when
+// the user toggles the dataset switcher.
+let _activeSrc: DemDsm = 'dem';
+/** Bumps on every profile sample-and-render so a stale fetch can detect itself. */
+let _profileGen = 0;
 
 // Bound listener references for clean removal.
 let _clickHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
@@ -82,14 +85,9 @@ export function initInspectControls(map: MaplibreMap): void {
   }
 }
 
-export function attachInspect(map: MaplibreMap, terrainEnabled: boolean): void {
+export function attachInspect(map: MaplibreMap): void {
   _map = map;
   _active = true;
-
-  if (!terrainEnabled) {
-    map.setTerrain({ source: 'dem', exaggeration: 1 });
-    _silentlyEnabledTerrain = true;
-  }
 
   ensureLineLayer(map);
 
@@ -108,30 +106,37 @@ export function attachInspect(map: MaplibreMap, terrainEnabled: boolean): void {
   refreshToolUI();
 }
 
-export function detachInspect(map: MaplibreMap, terrainEnabled: boolean): void {
+export function detachInspect(map: MaplibreMap): void {
   _active = false;
-
   if (_clickHandler) { map.off('click', _clickHandler); _clickHandler = null; }
   if (_moveHandler)  { map.off('mousemove', _moveHandler); _moveHandler = null; }
-
-  if (_silentlyEnabledTerrain && !terrainEnabled) map.setTerrain(null);
-  _silentlyEnabledTerrain = false;
-
   clearHoverMarker();
+}
+
+/** Called by main.ts when the user toggles the DEM/DSM dataset switcher. */
+export function setInspectActiveSrc(src: DemDsm): void {
+  if (src === _activeSrc) return;
+  _activeSrc = src;
+  // If a profile exists, re-sample it under the new dataset.
+  if (_profileStart && _profileEnd) void sampleAndRenderProfile();
+  // If a spot marker is pinned, re-read its elevation under the new dataset.
+  if (_spotMarker) {
+    const ll = _spotMarker.getLngLat();
+    renderSpotDetail(ll, queryElevation(ll));
+  }
 }
 
 // ── ELEVATION QUERY ───────────────────────────────────────────────────────────
 
-// queryTerrainElevation returns elevation × current exaggeration. Normalise so
-// the value is correct whether terrain is at our silent exag 1 or the user's
-// 3D-mode value of N.
+// Synchronous lookup against the shared dem-cache. Returns null if the tile
+// containing this lng/lat isn't yet cached — and kicks off a fetch so the
+// next call will hit cache.
 function queryElevation(lngLat: LngLatLike): number | null {
   if (!_map) return null;
-  const raw = _map.queryTerrainElevation(lngLat);
-  if (raw === null) return null;
-  const terrain = _map.getTerrain();
-  const exag = terrain?.exaggeration ?? 1;
-  return exag > 0 ? raw / exag : raw;
+  const ll = (lngLat as LngLat).lng !== undefined
+    ? (lngLat as LngLat)
+    : { lng: (lngLat as { lng: number; lat: number }).lng, lat: (lngLat as { lng: number; lat: number }).lat };
+  return demHeightAt(_activeSrc, ll.lng, ll.lat, _map.getZoom());
 }
 
 // ── TOOL SWITCHING ────────────────────────────────────────────────────────────
@@ -165,13 +170,24 @@ function refreshToolUI(): void {
 
 function handleSpotClick(lngLat: LngLat): void {
   if (!_map) return;
-  const elev = queryElevation(lngLat);
+  // Drop the marker right away — visual feedback first.
   if (!_spotMarker) {
     _spotMarker = new maplibregl.Marker({ color: '#0064c8' }).setLngLat(lngLat).addTo(_map);
   } else {
     _spotMarker.setLngLat(lngLat);
   }
-  renderSpotDetail(lngLat, elev);
+  // Sync read against the cache; if cold, await the fetch and update.
+  const sync = queryElevation(lngLat);
+  renderSpotDetail(lngLat, sync);
+  if (sync === null) {
+    void demHeightAtAsync(_activeSrc, lngLat.lng, lngLat.lat, _map.getZoom()).then(elev => {
+      // Only update if this is still the pinned spot.
+      const here = _spotMarker?.getLngLat();
+      if (here && here.lng === lngLat.lng && here.lat === lngLat.lat) {
+        renderSpotDetail(lngLat, elev);
+      }
+    });
+  }
 }
 
 function renderSpotDetail(lngLat: LngLat | null, elev: number | null): void {
@@ -202,7 +218,7 @@ function handleProfileClick(lngLat: LngLat): void {
   _profileEnd = lngLat;
   _profileEndMarker = new maplibregl.Marker({ color: '#00335b', scale: 0.7 }).setLngLat(lngLat).addTo(_map);
   drawProfileLine();
-  sampleAndRenderProfile();
+  void sampleAndRenderProfile();
   refreshToolUI();
 }
 
@@ -223,19 +239,31 @@ function drawProfileLine(): void {
   setLineData([[_profileStart.lng, _profileStart.lat], [_profileEnd.lng, _profileEnd.lat]]);
 }
 
-function sampleAndRenderProfile(): void {
+async function sampleAndRenderProfile(): Promise<void> {
   if (!_map || !_profileStart || !_profileEnd) return;
+  const gen = ++_profileGen;
   const N = INSPECT_PROFILE_SAMPLES;
   const s = _profileStart, e = _profileEnd;
   const totalM = haversineMetres(s.lng, s.lat, e.lng, e.lat);
-  _profileSamples = new Array(N);
-  for (let i = 0; i < N; i++) {
+  const z = _map.getZoom();
+  // Sample in parallel — dem-cache dedupes per-tile so 256 lookups across a
+  // handful of tiles only fetch each tile once.
+  const elevs = await Promise.all(
+    Array.from({ length: N }, (_, i) => {
+      const t = i / (N - 1);
+      return demHeightAtAsync(_activeSrc, s.lng + (e.lng - s.lng) * t, s.lat + (e.lat - s.lat) * t, z);
+    }),
+  );
+  if (gen !== _profileGen) return; // a newer profile started while we were fetching
+  _profileSamples = elevs.map((elev, i) => {
     const t = i / (N - 1);
-    const lng = s.lng + (e.lng - s.lng) * t;
-    const lat = s.lat + (e.lat - s.lat) * t;
-    const elev = queryElevation({ lng, lat });
-    _profileSamples[i] = { lng, lat, elev, distM: totalM * t };
-  }
+    return {
+      lng: s.lng + (e.lng - s.lng) * t,
+      lat: s.lat + (e.lat - s.lat) * t,
+      elev,
+      distM: totalM * t,
+    };
+  });
   renderProfileChart(totalM);
 }
 

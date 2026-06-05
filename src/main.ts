@@ -28,7 +28,8 @@ import {
 } from './modules/export.js';
 import { registerDiffProtocol, buildDiffColorExpr } from './modules/diff.js';
 import { registerAnalysisProtocol } from './modules/analysis.js';
-import { initInspectControls, attachInspect, detachInspect } from './modules/inspect.js';
+import { initInspectControls, attachInspect, detachInspect, setInspectActiveSrc } from './modules/inspect.js';
+import { initBasemap, isBasemapOrLabelLayer, moveLabelsToTop, setBasemap, setLabelsEnabled, setHillshadeBlend, type BasemapId, type HillshadeBlend } from './modules/basemap.js';
 import { initTerrainPreviews } from './modules/hs-thumbs.js';
 
 import './styles/main.css';
@@ -37,6 +38,7 @@ import './styles/coverage.css';
 import './styles/export.css';
 import './styles/diff.css';
 import './styles/inspect.css';
+import './styles/basemap.css';
 
 // Register the diff-dem:// virtual tile protocol once, before any map activity.
 registerDiffProtocol();
@@ -133,7 +135,12 @@ const map = new MaplibreMap({
   style: {
     version: 8,
     transition: { duration: 0, delay: 0 },
-    glyphs: 'https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf',
+    // Use LINZ's font and sprite endpoints so the Topolite vector basemap and
+    // the Labels overlay (both LINZ vector styles) can resolve their fonts and
+    // icons. Means our own vector labels (contour) must pick a font hosted by
+    // LINZ — Open Sans is the digital face there.
+    glyphs: `https://basemaps.linz.govt.nz/v1/fonts/{fontstack}/{range}.pbf?api=${API}`,
+    sprite: `https://basemaps.linz.govt.nz/v1/sprites/topographic?api=${API}`,
     sources: {
       dem: {
         type: 'raster-dem',
@@ -226,7 +233,7 @@ class Btn3DControl implements maplibregl.IControl {
   onRemove(): void { this._container.parentNode?.removeChild(this._container); }
 }
 
-map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-left');
+map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right');
 map.addControl(new Btn3DControl(), 'top-left');
 
 // ── MAP LOAD ──────────────────────────────────────────────────────────────────
@@ -238,6 +245,7 @@ map.on('load', () => {
   initCoverageControls(map);
   initExportControls(map);
   initInspectControls(map);
+  initBasemap(map, { writeHash: setHashParam });
   init3DButton(map);
   prefetchCoverage();
   restoreFromHash();
@@ -401,7 +409,6 @@ function renderRampMarkers(): void {
 
 // ── HILLSHADE CONTROLS ────────────────────────────────────────────────────────
 
-let elevHsEnabled = true;
 let hsSource: HsSource = 'terrain:igor';
 let terrainExag = 0.5; // tracks the terrain hillshade-exaggeration independently of raster opacity
 
@@ -472,13 +479,6 @@ HS_SOURCES.forEach(src => {
     ?.addEventListener('click', () => { if (activeTab === 'contour') setHashParam('preset', ctToken(name)); });
 });
 
-el<HTMLInputElement>('tog-elev-hs').addEventListener('change', e => {
-  elevHsEnabled = (e.target as HTMLInputElement).checked;
-  if (activeTab === 'elevation') {
-    map.setPaintProperty('hillshade', 'hillshade-exaggeration', elevHsEnabled ? 0.5 : 0);
-  }
-});
-
 el<HTMLInputElement>('sl-hs-dir').addEventListener('input', e => {
   const v = Number((e.target as HTMLInputElement).value);
   el('sl-hs-dir-v').textContent = `${v}°`;
@@ -529,11 +529,16 @@ el<HTMLInputElement>('sl-hs').addEventListener('input', e => {
   const v = Number((e.target as HTMLInputElement).value);
   el('sl-hs-v').textContent = (v / 10).toFixed(1);
   const [type] = hsSource.split(':') as [string];
+  // Each preset family targets its own layer — terrain hillshade's
+  // exaggeration, the pre-rendered raster overlay's opacity, or the
+  // slope/aspect analysis layer's opacity.
   if (type === 'terrain') {
     terrainExag = v / 10;
     map.setPaintProperty('hillshade', 'hillshade-exaggeration', terrainExag);
-  } else {
+  } else if (type === 'raster') {
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', v / 10);
+  } else {
+    map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', v / 10);
   }
 });
 
@@ -612,6 +617,7 @@ function switchSource(src: DemDsm): void {
   if (src === activeSrc) return;
   activeSrc = src;
   setContourSrc(src);
+  setInspectActiveSrc(src);
   const url = src === 'dsm' ? DSM_URL : ELEV_URL;
   const setTiles = (id: string, tiles: string[]): void => {
     const s = map.getSource(id) as RasterTileSource | undefined;
@@ -625,6 +631,9 @@ function switchSource(src: DemDsm): void {
   } else if (activeTab === 'hillshade' && hsSource.startsWith('raster:')) {
     const method = hsSource.split(':')[1] as HsRaster;
     setTiles('hillshade-raster', [HS_URLS[method][src]]);
+  } else if (activeTab === 'hillshade' && hsSource.startsWith('analysis:')) {
+    const method = hsSource.split(':')[1] as HsAnalysis;
+    setTiles(ANALYSIS_SOURCE, [ANALYSIS_URLS[method][src]]);
   }
   el('dsm-desc').textContent = DESCRIPTIONS[src];
   el<HTMLButtonElement>('btn-dem').classList.toggle('active', src === 'dem');
@@ -663,6 +672,7 @@ function teardownBase(): void {
 function firstOverlayLayerId(): string | undefined {
   for (const l of map.getStyle().layers) {
     if (l.id === 'bg' || BASE_LAYER_IDS.includes(l.id)) continue;
+    if (isBasemapOrLabelLayer(l.id)) continue;
     return l.id;
   }
   return undefined;
@@ -694,16 +704,13 @@ function hillshadePaint(method: HsMethod, exaggeration: number): Record<string, 
 }
 
 function buildElevationBase(): void {
+  // Colour Ramp now sits on top of whatever the user picks in the basemap
+  // switcher — no built-in hillshade backdrop.
   map.addSource('dem-relief', demSpec());
-  map.addSource('dem-hillshade', demSpec());
   const opPct = Number(el<HTMLInputElement>('sl-op').value);
   addBaseLayer({
     id: 'color-relief', type: 'color-relief', source: 'dem-relief',
     paint: { 'color-relief-color': buildColorExpr(stops), 'color-relief-opacity': opPct / 100 },
-  } as Parameters<typeof map.addLayer>[0]);
-  addBaseLayer({
-    id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
-    paint: hillshadePaint('igor', elevHsEnabled ? 0.5 : 0),
   } as Parameters<typeof map.addLayer>[0]);
 }
 
@@ -725,37 +732,16 @@ function buildHillshadeBase(): void {
   } as Parameters<typeof map.addLayer>[0]);
 }
 
-function buildContourBase(): void {
-  map.addSource('hillshade-raster', rasterSpec(HS_URLS.igor[activeSrc]));
-  map.addSource('aerial', rasterSpec(AERIAL_URL));
-  addBaseLayer({
-    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
-    paint: { 'raster-opacity': 1 },
-  } as Parameters<typeof map.addLayer>[0]);
-  addBaseLayer({
-    id: 'aerial-layer', type: 'raster', source: 'aerial',
-    layout: { visibility: 'none' },
-  } as Parameters<typeof map.addLayer>[0]);
-}
-
-function buildCoverageBase(): void {
-  map.addSource('hillshade-raster', rasterSpec(HS_URLS.igor[activeSrc]));
-  addBaseLayer({
-    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
-    paint: { 'raster-opacity': 1 },
-  } as Parameters<typeof map.addLayer>[0]);
-}
-
 function enterElevationMode(): void {
   teardownBase();
   buildElevationBase();
 }
 
 // ── COVERAGE MODE ─────────────────────────────────────────────────────────────
-
+// The backdrop now comes from the global basemap switcher; coverage just shows
+// its own data layers on top.
 function enterCoverageMode(): void {
   teardownBase();
-  buildCoverageBase();
   showCoverageLayers(map);
 }
 
@@ -765,18 +751,8 @@ function leaveCoverageMode(): void {
 
 // ── EXPORT MODE ───────────────────────────────────────────────────────────────
 
-function buildExportBase(): void {
-  // Same hillshade backdrop as the coverage mode.
-  map.addSource('hillshade-raster', rasterSpec(HS_URLS.igor[activeSrc]));
-  addBaseLayer({
-    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
-    paint: { 'raster-opacity': 1 },
-  } as Parameters<typeof map.addLayer>[0]);
-}
-
 function enterExportMode(): void {
   teardownBase();
-  buildExportBase();
   showExportLayers(map);
 }
 
@@ -821,51 +797,22 @@ map.on('zoom', updateDiffZoomHint);
 
 // ── INSPECT MODE ──────────────────────────────────────────────────────────────
 
-function buildInspectBase(): void {
-  // Same hillshade backdrop as Coverage / Export — gives terrain context
-  // without competing with the spot/profile overlays.
-  map.addSource('hillshade-raster', rasterSpec(HS_URLS.igor[activeSrc]));
-  addBaseLayer({
-    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
-    paint: { 'raster-opacity': 1 },
-  } as Parameters<typeof map.addLayer>[0]);
-}
-
 function enterInspectMode(): void {
   teardownBase();
-  buildInspectBase();
-  attachInspect(map, is3D);
+  attachInspect(map);
 }
 
 function leaveInspectMode(): void {
-  detachInspect(map, is3D);
+  detachInspect(map);
 }
 
 // ── CONTOUR MODE ──────────────────────────────────────────────────────────────
-
-type ContourBackdrop = 'igor-dem' | 'igor-dsm' | 'aerial';
-let contourBackdrop: ContourBackdrop = 'igor-dem';
-
-function applyContourBackdrop(bd: ContourBackdrop): void {
-  contourBackdrop = bd;
-  if (bd === 'aerial') {
-    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 0);
-    map.setLayoutProperty('aerial-layer', 'visibility', 'visible');
-  } else {
-    (map.getSource('hillshade-raster') as RasterTileSource)
-      .setTiles([HS_URLS.igor[bd === 'igor-dsm' ? 'dsm' : 'dem']]);
-    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
-    map.setLayoutProperty('aerial-layer', 'visibility', 'none');
-  }
-}
-
+// The backdrop is now owned by the global basemap switcher, so contour mode
+// just tears down whatever base was up and adds its own contour vector layers
+// on top. Defer the contour add until the basemap teardown has settled —
+// addContourLayers silently fails to request its first tiles otherwise.
 function enterContourMode(): void {
   teardownBase();
-  buildContourBase();
-  applyContourBackdrop(contourBackdrop);
-  // Defer until the freshly-rebuilt base sources have settled. Adding the
-  // contour vector source mid-base-rebuild silently fails to request its
-  // first tiles.
   map.once('idle', () => {
     if (activeTab === 'contour') addContourLayers();
   });
@@ -880,11 +827,6 @@ function enterHillshadeMode(): void {
   if (!hsPreviewed) { hsPreviewed = true; initTerrainPreviews().catch(console.warn); }
 }
 
-el<HTMLSelectElement>('sel-ct-backdrop').addEventListener('change', e => {
-  const bd = (e.target as HTMLSelectElement).value as ContourBackdrop;
-  contourBackdrop = bd;
-  if (activeTab === 'contour') applyContourBackdrop(bd);
-});
 
 // Sentence-case titles shown in the panel header — driven by the active rail disc.
 const TAB_TITLES: Record<TabName, string> = {
@@ -914,6 +856,9 @@ function switchTab(next: TabName): void {
   setHashParam('mode', next === 'elevation' ? null : next);
   syncPresetHash();
   updateDiffZoomHint();
+  // Difference visualises DSM − DEM together, so the dataset switcher is
+  // meaningless there. Hide #pan-global on that mode only.
+  document.getElementById('pan-global')?.classList.toggle('hidden', next === 'diff');
 
   const enter = (): void => {
     if (prev === 'coverage') leaveCoverageMode();
@@ -928,9 +873,15 @@ function switchTab(next: TabName): void {
     else if (next === 'export') { enterExportMode(); loadExport(map, activeSrc); }
     else if (next === 'diff') enterDiffMode();
     else if (next === 'inspect') enterInspectMode();
+    // The freshly-added mode-base / overlay layers go on top of bg; if the
+    // Labels overlay is on, re-stack it so it stays the topmost group.
+    moveLabelsToTop();
   };
-  if (map.loaded()) enter();
-  else map.once('load', enter);
+  // `isStyleLoaded` instead of `loaded` — the latter is false during any tile
+  // fetch, and `map.once('load', ...)` would queue against a one-shot event
+  // that's already fired, leaving the tab switch silently dead.
+  if (map.isStyleLoaded()) enter();
+  else map.once('style.load', enter);
 }
 
 document.querySelectorAll<HTMLButtonElement>('.rail-disc').forEach(disc => {
@@ -943,6 +894,16 @@ document.querySelectorAll<HTMLButtonElement>('.rail-disc').forEach(disc => {
 function restoreFromHash(): void {
   const p = readHash();
   if (p['dataset'] === 'dsm') switchSource('dsm');
+
+  // Basemap + Labels overlay (driven by the on-map basemap control).
+  const bm = p['basemap'];
+  if (bm === 'none' || bm === 'aerial' || bm === 'hillshade-dem' || bm === 'hillshade-dsm' || bm === 'topolite') {
+    setBasemap(bm as BasemapId);
+  }
+  if (p['overlay'] === 'labels') setLabelsEnabled(true);
+  const blend = p['blend'];
+  if (blend === 'dem' || blend === 'dsm') setHillshadeBlend(blend as HillshadeBlend);
+
   const mode = p['mode'];
   if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage' || mode === 'export' || mode === 'diff' || mode === 'inspect') switchTab(mode);
 
