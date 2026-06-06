@@ -885,7 +885,12 @@ function switchTab(next: TabName): void {
 }
 
 document.querySelectorAll<HTMLButtonElement>('.rail-disc').forEach(disc => {
-  disc.addEventListener('click', () => switchTab(disc.dataset['tab'] as TabName));
+  disc.addEventListener('click', () => {
+    switchTab(disc.dataset['tab'] as TabName);
+    // On mobile, the panel collapses to a rail-only strip — tapping a disc
+    // should re-expand the panel to show that mode's content.
+    if (panelEl.classList.contains('collapsed')) setPanelCollapsed(false);
+  });
 });
 
 // Apply view state encoded in the URL hash. Camera is restored automatically by
@@ -933,6 +938,8 @@ function setPanelCollapsed(collapsed: boolean): void {
 }
 
 panelToggleEl.addEventListener('click', () => setPanelCollapsed(!panelEl.classList.contains('collapsed')));
+// Mobile X close button — same effect as the desktop chevron's "close" state.
+el<HTMLButtonElement>('pnl-close').addEventListener('click', () => setPanelCollapsed(true));
 panelEl.addEventListener('transitionend', () => map.resize());
 
 if (window.innerWidth < 768) setPanelCollapsed(true);

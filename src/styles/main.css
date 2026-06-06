@@ -132,3 +132,8 @@ html, body {
 
 /* ── UTILITY ── */
 .hidden { display: none !important; }
+
+/* ── MOBILE ── hide the LINZ Basemaps + GitHub links on small screens. */
+@media (max-width: 768px) {
+  .hdr-a { display: none; }
+}

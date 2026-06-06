@@ -39,12 +39,22 @@
   background: var(--blue-lt);
   border-bottom: 1px solid var(--bdr);
   padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
 }
 .pnl-head h2 {
   font-family: var(--font);
   font-size: 16px; font-weight: 700; color: var(--navy);
   letter-spacing: -.01em;
 }
+
+/* X close button — hidden on desktop, shown on mobile via the @media below. */
+#pnl-close {
+  display: none;
+  background: transparent; border: none; padding: 4px;
+  color: var(--navy); cursor: pointer; border-radius: 4px; line-height: 0;
+  transition: background .15s;
+}
+#pnl-close:hover { background: rgba(0, 66, 93, 0.1); }
 
 /* ── PANEL BODY: rail on the left, scrolling content on the right ── */
 .panel-body { flex: 1; display: flex; min-height: 0; }
@@ -214,3 +224,38 @@
   cursor: pointer; width: 100%; transition: background .15s;
 }
 .apply-btn:hover { background: var(--blue); }
+
+/* ── MOBILE ────────────────────────────────────────────────────────────────
+   On narrow viewports the panel becomes a full-screen overlay. The icon rail
+   stays visible at all times as a thin strip on the right edge of the map —
+   tapping a disc opens the panel; the X in the panel header closes it back
+   to the rail-only state. */
+@media (max-width: 768px) {
+  /* Panel takes the full viewport when open and overlays the map. */
+  #panel {
+    width: 100vw;
+    border-left: none;
+    transition: width .28s ease;
+  }
+  #map-wrap, #map-wrap.panel-hidden {
+    /* Map fills the screen — panel overlays it. */
+    right: 0;
+  }
+
+  /* Hide the desktop chevron tab; X in the header takes over. */
+  #panel-toggle { display: none; }
+  #pnl-close { display: flex; align-items: center; justify-content: center; }
+
+  /* Collapsed = rail-only strip on the right. Don't slide off-screen. */
+  #panel.collapsed {
+    transform: none;
+    width: 58px;
+    box-shadow: -3px 0 10px rgba(0, 0, 0, .08);
+  }
+  #panel.collapsed .pnl-head,
+  #panel.collapsed #pan-global,
+  #panel.collapsed .pnl-content {
+    display: none;
+  }
+  #panel.collapsed .rail { border-right: none; }
+}
