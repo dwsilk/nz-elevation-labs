@@ -178,11 +178,17 @@ export function addContourLayers(): void {
     maxzoom: 15,
   });
 
+  // visibility:'none' is what makes MapLibre mark contour-source unused and
+  // skip tile fetches (and the maplibre-contour worker) — opacity-0 alone
+  // still pulls vector tiles in the background.
+  const linesVis = cfg.opacity > 0 ? 'visible' : 'none';
+  const labelsVis = (cfg.showLabels && cfg.labelOpacity > 0) ? 'visible' : 'none';
+
   _map.addLayer({
     id: 'contour-lines-minor', type: 'line',
     source: 'contour-source', 'source-layer': 'contours',
     filter: ['all', ['==', ['get', 'level'], 0], ['!=', ['get', 'ele'], 0]],
-    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    layout: { 'line-join': 'round', 'line-cap': 'round', visibility: linesVis },
     paint: { 'line-color': cfg.minorColor, 'line-width': cfg.minorWidth, 'line-opacity': cfg.opacity },
   });
 
@@ -190,7 +196,7 @@ export function addContourLayers(): void {
     id: 'contour-lines-major', type: 'line',
     source: 'contour-source', 'source-layer': 'contours',
     filter: ['all', ['==', ['get', 'level'], 1], ['!=', ['get', 'ele'], 0]],
-    layout: { 'line-join': 'round', 'line-cap': 'round' },
+    layout: { 'line-join': 'round', 'line-cap': 'round', visibility: linesVis },
     paint: { 'line-color': cfg.majorColor, 'line-width': cfg.majorWidth, 'line-opacity': cfg.opacity },
   });
 
@@ -204,7 +210,7 @@ export function addContourLayers(): void {
       'text-font': [cfg.font],
       'text-size': cfg.textSize,
       'text-allow-overlap': false,
-      visibility: cfg.showLabels ? 'visible' : 'none',
+      visibility: labelsVis,
     },
     paint: {
       'text-color': cfg.labelColor,
@@ -221,16 +227,24 @@ export function addContourLayers(): void {
 export function updateContourPaint(): void {
   if (!_map || !ctLayers.length) return;
   const cfg = getCtConfig();
+  // Mirror the visibility logic in addContourLayers: hide layers whose
+  // effective opacity is 0 so MapLibre stops loading contour-source tiles
+  // (and the maplibre-contour worker stops decoding DEM tiles) when the
+  // master / per-line / per-label sliders are pulled to zero.
+  const linesVis = cfg.opacity > 0 ? 'visible' : 'none';
+  const labelsVis = (cfg.showLabels && cfg.labelOpacity > 0) ? 'visible' : 'none';
 
   if (_map.getLayer('contour-lines-minor')) {
     _map.setPaintProperty('contour-lines-minor', 'line-color', cfg.minorColor);
     _map.setPaintProperty('contour-lines-minor', 'line-width', cfg.minorWidth);
     _map.setPaintProperty('contour-lines-minor', 'line-opacity', cfg.opacity);
+    _map.setLayoutProperty('contour-lines-minor', 'visibility', linesVis);
   }
   if (_map.getLayer('contour-lines-major')) {
     _map.setPaintProperty('contour-lines-major', 'line-color', cfg.majorColor);
     _map.setPaintProperty('contour-lines-major', 'line-width', cfg.majorWidth);
     _map.setPaintProperty('contour-lines-major', 'line-opacity', cfg.opacity);
+    _map.setLayoutProperty('contour-lines-major', 'visibility', linesVis);
   }
   if (_map.getLayer('contour-labels')) {
     _map.setPaintProperty('contour-labels', 'text-color', cfg.labelColor);
@@ -239,7 +253,7 @@ export function updateContourPaint(): void {
     _map.setPaintProperty('contour-labels', 'text-halo-width', cfg.haloWidth);
     _map.setPaintProperty('contour-labels', 'text-halo-blur', cfg.haloBlur);
     _map.setLayoutProperty('contour-labels', 'text-size', cfg.textSize);
-    _map.setLayoutProperty('contour-labels', 'visibility', cfg.showLabels ? 'visible' : 'none');
+    _map.setLayoutProperty('contour-labels', 'visibility', labelsVis);
   }
 }
 

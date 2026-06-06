@@ -194,6 +194,9 @@ const map = new MaplibreMap({
       },
       {
         id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+        // visibility:'none' (not just opacity 0) so MapLibre doesn't fetch
+        // hillshade-raster tiles before teardownBase runs on first mode entry.
+        layout: { visibility: 'none' },
         paint: { 'raster-opacity': 0.0 },
       },
       {
@@ -442,22 +445,30 @@ function applyHsPreset(src: HsSource): void {
   document.getElementById(`hs-pre-${type}-${method}`)?.classList.add('active');
   if (activeTab !== 'hillshade') return;
 
-  // Each preset family owns one of three render targets — turn the others off.
+  // Each preset family owns one of three render targets. Toggle layer
+  // *visibility* (not just opacity) so MapLibre stops fetching tiles for the
+  // two inactive sources — opacity:0 keeps the source marked "used".
+  const setVis = (id: string, on: boolean): void => {
+    map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+  };
   if (type === 'terrain') {
+    setVis('hillshade', true);
+    setVis('hillshade-raster-layer', false);
+    setVis(ANALYSIS_LAYER, false);
     map.setPaintProperty('hillshade', 'hillshade-method', method as HsMethod);
     map.setPaintProperty('hillshade', 'hillshade-exaggeration', terrainExag);
-    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 0);
-    map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', 0);
   } else if (type === 'raster') {
+    setVis('hillshade', false);
+    setVis('hillshade-raster-layer', true);
+    setVis(ANALYSIS_LAYER, false);
     (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS[method as HsRaster][activeSrc]]);
-    map.setPaintProperty('hillshade', 'hillshade-exaggeration', 0);
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
-    map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', 0);
   } else { // analysis
+    setVis('hillshade', false);
+    setVis('hillshade-raster-layer', false);
+    setVis(ANALYSIS_LAYER, true);
     (map.getSource(ANALYSIS_SOURCE) as RasterTileSource)
       .setTiles([ANALYSIS_URLS[method as HsAnalysis][activeSrc]]);
-    map.setPaintProperty('hillshade', 'hillshade-exaggeration', 0);
-    map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 0);
     map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', 1.0);
   }
   syncPresetHash();
@@ -549,6 +560,8 @@ el<HTMLInputElement>('sl-op').addEventListener('input', e => {
   el('sl-op-v').textContent = v + '%';
   if (map.getLayer('color-relief')) {
     map.setPaintProperty('color-relief', 'color-relief-opacity', v / 100);
+    // Toggle visibility too — opacity-0 alone keeps dem-relief tiles fetching.
+    map.setLayoutProperty('color-relief', 'visibility', v > 0 ? 'visible' : 'none');
   }
 });
 
@@ -559,6 +572,9 @@ el<HTMLInputElement>('sl-diff-op').addEventListener('input', e => {
   el('sl-diff-op-v').textContent = v + '%';
   if (map.getLayer(DIFF_LAYER)) {
     map.setPaintProperty(DIFF_LAYER, 'color-relief-opacity', v / 100);
+    // Same pattern as sl-op — visibility:none stops the DIFF_SOURCE protocol
+    // calls (which fetch + decode both DEM and DSM tiles per diff tile).
+    map.setLayoutProperty(DIFF_LAYER, 'visibility', v > 0 ? 'visible' : 'none');
   }
 });
 
@@ -710,6 +726,7 @@ function buildElevationBase(): void {
   const opPct = Number(el<HTMLInputElement>('sl-op').value);
   addBaseLayer({
     id: 'color-relief', type: 'color-relief', source: 'dem-relief',
+    layout: { visibility: opPct > 0 ? 'visible' : 'none' },
     paint: { 'color-relief-color': buildColorExpr(stops), 'color-relief-opacity': opPct / 100 },
   } as Parameters<typeof map.addLayer>[0]);
 }
@@ -718,16 +735,23 @@ function buildHillshadeBase(): void {
   map.addSource('dem-hillshade', demSpec());
   map.addSource('hillshade-raster', rasterSpec(HS_URLS.standard[activeSrc]));
   map.addSource(ANALYSIS_SOURCE, rasterSpec(ANALYSIS_URLS.slope[activeSrc]));
+  // All three start hidden — applyHsPreset turns exactly one on. This stops
+  // MapLibre from fetching tiles for the two inactive sources (the tile
+  // manager only marks a source "used" if a layer references it AND that
+  // layer's visibility is not 'none' — opacity:0 alone doesn't stop fetches).
   addBaseLayer({
     id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
+    layout: { visibility: 'none' },
     paint: hillshadePaint('igor', 0),
   } as Parameters<typeof map.addLayer>[0]);
   addBaseLayer({
     id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+    layout: { visibility: 'none' },
     paint: { 'raster-opacity': 0 },
   } as Parameters<typeof map.addLayer>[0]);
   addBaseLayer({
     id: ANALYSIS_LAYER, type: 'raster', source: ANALYSIS_SOURCE,
+    layout: { visibility: 'none' },
     paint: { 'raster-opacity': 0 },
   } as Parameters<typeof map.addLayer>[0]);
 }
@@ -770,6 +794,7 @@ function buildDiffBase(): void {
   const opPct = Number(el<HTMLInputElement>('sl-diff-op').value);
   addBaseLayer({
     id: DIFF_LAYER, type: 'color-relief', source: DIFF_SOURCE,
+    layout: { visibility: opPct > 0 ? 'visible' : 'none' },
     paint: { 'color-relief-color': buildDiffColorExpr(), 'color-relief-opacity': opPct / 100 },
   } as Parameters<typeof map.addLayer>[0]);
   addBaseLayer({
