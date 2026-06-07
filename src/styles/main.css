@@ -136,4 +136,12 @@ html, body {
 /* ── MOBILE ── hide the LINZ Basemaps + GitHub links on small screens. */
 @media (max-width: 768px) {
   .hdr-a { display: none; }
+  /* The collapsed panel is a 58 px rail strip pinned to the right edge of
+     the map, which otherwise sits on top of the attribution + scale bar.
+     Push MapLibre's right-anchored controls inward (rail width + a small
+     gap) so they stay visible alongside the rail. */
+  .maplibregl-ctrl-top-right,
+  .maplibregl-ctrl-bottom-right {
+    right: 64px !important;
+  }
 }
