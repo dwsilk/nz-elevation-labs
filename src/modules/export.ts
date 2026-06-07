@@ -44,8 +44,9 @@ let _selectedId: number | null = null;
 let _eventsBound = false;
 let _totalItems = 0;
 let _updatePending = false;
-/** STAC item id → S3 Last-Modified (YYYY-MM-DD) or '—' on failure; absent ⇒ not fetched yet. */
-const _lastUpdatedCache = new Map<string, string>();
+/** STAC item id → headers parsed from a HEAD on the asset; absent ⇒ not fetched yet. */
+interface ItemMeta { updated: string; size: string }
+const _itemMetaCache = new Map<string, ItemMeta>();
 
 function el<T extends HTMLElement>(id: string): T | null {
   return document.getElementById(id) as T | null;
@@ -272,34 +273,52 @@ function renderDetail(p: ExportProps): void {
   const inner = el<HTMLDivElement>('exp-detail-inner');
   if (!inner) return;
   const range = p.start && p.end && p.start !== p.end ? `${p.start} → ${p.end}` : (p.start || p.end || '—');
-  const updated = _lastUpdatedCache.get(p.id);
+  const meta = _itemMetaCache.get(p.id);
   inner.innerHTML =
     `<div class="exp-row"><span class="exp-lbl">Tile</span><span class="exp-val">${p.id}</span></div>` +
     `<div class="exp-row"><span class="exp-lbl">Captured</span><span class="exp-val">${range}</span></div>` +
-    `<div class="exp-row"><span class="exp-lbl">Updated</span><span class="exp-val" data-last-updated="${p.id}">${updated ?? '…'}</span></div>`;
+    `<div class="exp-row"><span class="exp-lbl">Updated</span><span class="exp-val" data-last-updated="${p.id}">${meta?.updated ?? '…'}</span></div>` +
+    `<div class="exp-row"><span class="exp-lbl">Size</span><span class="exp-val" data-tile-size="${p.id}">${meta?.size ?? '…'}</span></div>`;
   const dl = el<HTMLAnchorElement>('exp-dl-btn');
   if (dl) dl.href = p.downloadUrl;
   el<HTMLDivElement>('exp-detail')?.classList.remove('hidden');
-  if (updated === undefined) void fetchLastUpdated(p.id, p.downloadUrl);
+  if (meta === undefined) void fetchItemMeta(p.id, p.downloadUrl);
 }
 
-async function fetchLastUpdated(tileId: string, url: string): Promise<void> {
-  let value = '—';
+function formatBytes(n: number): string {
+  if (!isFinite(n) || n <= 0) return '—';
+  const u = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0, v = n;
+  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  // Coarser precision as numbers get bigger — "1.23 KB" reads fine, "234.56 MB"
+  // is just noise. 1024-based units keep the displayed numbers in line with
+  // what S3 / browser dev-tools report.
+  const decimals = i === 0 ? 0 : v >= 100 ? 0 : v >= 10 ? 1 : 2;
+  return `${v.toFixed(decimals)} ${u[i]}`;
+}
+
+async function fetchItemMeta(tileId: string, url: string): Promise<void> {
+  let updated = '—';
+  let size = '—';
   try {
     const res = await fetch(url, { method: 'HEAD' });
     const lm = res.headers.get('Last-Modified');
     if (lm) {
       const d = new Date(lm);
-      if (!isNaN(d.getTime())) value = d.toISOString().slice(0, 10);
+      if (!isNaN(d.getTime())) updated = d.toISOString().slice(0, 10);
     }
+    const cl = res.headers.get('Content-Length');
+    if (cl) size = formatBytes(Number(cl));
   } catch (err) {
-    console.warn('HEAD request for Last-Modified failed:', url, err);
+    console.warn('HEAD request failed:', url, err);
   }
-  _lastUpdatedCache.set(tileId, value);
-  // Only update the DOM if this tile is still the one displayed (selector is
-  // unique per tile id and disappears when a different tile is selected).
-  const cell = document.querySelector<HTMLSpanElement>(`[data-last-updated="${CSS.escape(tileId)}"]`);
-  if (cell) cell.textContent = value;
+  _itemMetaCache.set(tileId, { updated, size });
+  // Only update DOM cells if this tile is still the one displayed (selectors
+  // are unique per tile id and disappear when a different tile is selected).
+  const updEl  = document.querySelector<HTMLSpanElement>(`[data-last-updated="${CSS.escape(tileId)}"]`);
+  if (updEl)  updEl.textContent  = updated;
+  const sizeEl = document.querySelector<HTMLSpanElement>(`[data-tile-size="${CSS.escape(tileId)}"]`);
+  if (sizeEl) sizeEl.textContent = size;
 }
 
 function clearSelection(map: MaplibreMap): void {
