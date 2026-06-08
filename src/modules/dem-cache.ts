@@ -56,6 +56,19 @@ export function peekDemHeights(src: DemDsm, z: number, x: number, y: number): Fl
   return _resolved.get(`${src}/${z}/${x}/${y}`) ?? null;
 }
 
+/**
+ * Decode a Mapbox terrain-RGB-encoded RGBA buffer into a Float32 heights array.
+ *   h = -10000 + (R*65536 + G*256 + B) * 0.1
+ * Pure — pulled out of decodeHeights so it's unit-testable without a Canvas.
+ */
+export function decodeTerrainRgb(rgba: Uint8ClampedArray | Uint8Array): Float32Array {
+  const out = new Float32Array(rgba.length / 4);
+  for (let i = 0, p = 0; i < rgba.length; i += 4, p++) {
+    out[p] = (rgba[i]! * 65536 + rgba[i + 1]! * 256 + rgba[i + 2]!) * 0.1 - 10000;
+  }
+  return out;
+}
+
 async function decodeHeights(
   src: DemDsm, z: number, x: number, y: number,
   abort?: AbortController,
@@ -71,20 +84,16 @@ async function decodeHeights(
   if (!ctx) throw new Error('OffscreenCanvas 2D context unavailable');
   ctx.drawImage(img, 0, 0);
   const enc = ctx.getImageData(0, 0, DEM_TILE_SIZE, DEM_TILE_SIZE).data;
-  const heights = new Float32Array(DEM_TILE_SIZE * DEM_TILE_SIZE);
-  for (let i = 0, p = 0; i < enc.length; i += 4, p++) {
-    heights[p] = (enc[i]! * 65536 + enc[i+1]! * 256 + enc[i+2]!) * 0.1 - 10000;
-  }
-  return heights;
+  return decodeTerrainRgb(enc);
 }
 
 // ── LNG/LAT LOOKUP ────────────────────────────────────────────────────────────
 // LINZ's LiDAR-derived terrain-RGB stops at z=14; clamp queries above that.
-const MAX_DEM_ZOOM = 14;
+export const MAX_DEM_ZOOM = 14;
 
-interface TilePixel { z: number; x: number; y: number; px: number; py: number }
+export interface TilePixel { z: number; x: number; y: number; px: number; py: number }
 
-function lngLatToTilePixel(lng: number, lat: number, zoom: number): TilePixel {
+export function lngLatToTilePixel(lng: number, lat: number, zoom: number): TilePixel {
   const z = Math.max(0, Math.min(MAX_DEM_ZOOM, Math.round(zoom)));
   const n = Math.pow(2, z);
   const latRad = lat * Math.PI / 180;

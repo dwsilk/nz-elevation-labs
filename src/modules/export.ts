@@ -285,7 +285,7 @@ function renderDetail(p: ExportProps): void {
   if (meta === undefined) void fetchItemMeta(p.id, p.downloadUrl);
 }
 
-function formatBytes(n: number): string {
+export function formatBytes(n: number): string {
   if (!isFinite(n) || n <= 0) return '—';
   const u = ['B', 'KB', 'MB', 'GB', 'TB'];
   let i = 0, v = n;
