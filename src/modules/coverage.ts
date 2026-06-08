@@ -26,7 +26,7 @@ interface RawCaptureProperties {
 }
 
 /** Normalised properties added during load */
-interface NormalisedCaptureProperties extends RawCaptureProperties {
+export interface NormalisedCaptureProperties extends RawCaptureProperties {
   startDate: string;
   endDate: string;
   year_label: string;
@@ -80,7 +80,7 @@ const EARTH_R_KM  = 6371;
 const NZ_AREA_KM2 = 268_021;
 const DEG2RAD     = Math.PI / 180;
 
-function ringAreaKm2(coords: number[][]): number {
+export function ringAreaKm2(coords: number[][]): number {
   let sum = 0;
   for (let i = 0, n = coords.length; i < n; i++) {
     const c0 = coords[i]!;
@@ -90,7 +90,7 @@ function ringAreaKm2(coords: number[][]): number {
   return Math.abs(sum) * EARTH_R_KM * EARTH_R_KM / 2;
 }
 
-function featureAreaKm2(f: Feature<Geometry, NormalisedCaptureProperties>): number {
+export function featureAreaKm2(f: Feature<Geometry, NormalisedCaptureProperties>): number {
   const geo = f.geometry;
   if (geo.type === 'Polygon') {
     let a = ringAreaKm2(geo.coordinates[0] as number[][]);
@@ -119,7 +119,7 @@ export function buildAgeColorExpr(): ExpressionSpecification {
 
 // ── YEAR RANGE ────────────────────────────────────────────────────────────────
 
-function featureYears(f: Feature<Geometry, NormalisedCaptureProperties>): string[] {
+export function featureYears(f: Feature<Geometry, NormalisedCaptureProperties>): string[] {
   const from = f.properties.flown_from ?? '';
   const to   = f.properties.flown_to   ?? from;
   const yrFrom = parseInt(from.slice(0, 4), 10);

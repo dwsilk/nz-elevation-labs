@@ -31,6 +31,7 @@ import { registerAnalysisProtocol } from './modules/analysis.js';
 import { initInspectControls, attachInspect, detachInspect, setInspectActiveSrc } from './modules/inspect.js';
 import { initBasemap, isBasemapOrLabelLayer, moveLabelsToTop, setBasemap, setLabelsEnabled, setHillshadeBlend, type BasemapId, type HillshadeBlend } from './modules/basemap.js';
 import { initTerrainPreviews } from './modules/hs-thumbs.js';
+import { readHash, setHashParam } from './modules/hash.js';
 
 import './styles/main.css';
 import './styles/panel.css';
@@ -58,24 +59,8 @@ function el<T extends HTMLElement>(id: string): T {
 // (used for `terrain`). We write with replaceState so we never fight MapLibre's
 // camera writer or spam browser history.
 
-function readHash(): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const part of window.location.hash.replace(/^#/, '').split('&')) {
-    if (!part) continue;
-    const [k, v] = part.split('=');
-    if (k) out[k] = v ?? '';
-  }
-  return out;
-}
-
-function setHashParam(key: string, value: string | null): void {
-  const params = readHash();
-  if (value === null) delete params[key];
-  else params[key] = value;
-  const parts = Object.entries(params).map(([k, v]) => (v === '' ? k : `${k}=${v}`));
-  const newHash = parts.length ? `#${parts.join('&')}` : '';
-  window.history.replaceState(window.history.state, '', window.location.href.replace(/(#.*)?$/, newHash));
-}
+// readHash + setHashParam now live in modules/hash.ts — pulled out so they're
+// unit-testable in happy-dom without the rest of the app's side effects.
 
 // Preset identifiers in the hash are human-readable and mode-specific:
 // elevation → ramp name slug (e.g. `cividis`), hillshade → `dynamic.<m>` /
