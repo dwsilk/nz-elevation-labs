@@ -35,8 +35,14 @@ import {
   type DemDsm,
 } from './config.js';
 import { demHeightAt, demHeightAtAsync } from './dem-cache.js';
+import {
+  computeViewshed,
+  mountViewshedOverlay,
+  unmountViewshedOverlay,
+  type ViewshedResult,
+} from './viewshed.js';
 
-type Tool = 'spot' | 'profile';
+type Tool = 'spot' | 'profile' | 'viewshed';
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -65,6 +71,25 @@ let _profileGen = 0;
 let _clickHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
 let _moveHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
 
+// Viewshed state
+const VS_RADIUS_M = 5000;
+const VS_GRID_BUTTON_IDS = ['insp-vs-grid-100', 'insp-vs-grid-30'] as const;
+// Live preview compute settings — coarse + strided, sized to land under ~50 ms
+// per compute so it can keep up with mousemove.
+const VS_LIVE_GRID_M = 250;
+const VS_LIVE_DDA_STRIDE = 4;
+let _vsViewpoint: LngLat | null = null;
+let _vsMarker: Marker | null = null;
+let _vsGridM = 100; // 100 / 30 m — selected via the segmented toggle
+let _vsEyeM = 1.7;
+let _vsComputing = false;
+/** Bumps on every recompute so a stale fetch can detect itself. */
+let _vsGen = 0;
+// Live preview state — independent of the pinned-viewpoint state above.
+let _vsLiveMode = false;
+let _vsLiveBusy = false;
+let _vsLivePending: LngLat | null = null;
+
 // Chart layout constants — keep in one place so onChartMove and renderProfileChart agree.
 const CH_W = 300,
   CH_H = 120,
@@ -89,8 +114,40 @@ export function initInspectControls(map: MaplibreMap): void {
   _map = map;
   el<HTMLButtonElement>('insp-tool-spot')?.addEventListener('click', () => setTool('spot'));
   el<HTMLButtonElement>('insp-tool-profile')?.addEventListener('click', () => setTool('profile'));
+  el<HTMLButtonElement>('insp-tool-viewshed')?.addEventListener('click', () => setTool('viewshed'));
   el<HTMLButtonElement>('insp-spot-clear')?.addEventListener('click', clearSpot);
   el<HTMLButtonElement>('insp-profile-clear')?.addEventListener('click', clearProfile);
+
+  // Viewshed controls.
+  el<HTMLButtonElement>('insp-vs-clear')?.addEventListener('click', clearViewshed);
+  el<HTMLButtonElement>('insp-vs-recompute')?.addEventListener('click', () => {
+    if (_vsViewpoint) void runViewshed(_vsViewpoint);
+  });
+  const eyeSlider = el<HTMLInputElement>('insp-vs-eye');
+  eyeSlider?.addEventListener('input', () => {
+    if (!eyeSlider) return;
+    _vsEyeM = Number(eyeSlider.value);
+    const v = el<HTMLSpanElement>('insp-vs-eye-v');
+    if (v) v.textContent = `${_vsEyeM.toFixed(1)} m`;
+    enableRecomputeIfReady();
+  });
+  for (const id of VS_GRID_BUTTON_IDS) {
+    el<HTMLButtonElement>(id)?.addEventListener('click', () => {
+      const btn = el<HTMLButtonElement>(id);
+      if (!btn) return;
+      _vsGridM = Number(btn.dataset['gridm']);
+      for (const other of VS_GRID_BUTTON_IDS) {
+        el<HTMLButtonElement>(other)?.classList.toggle('active', other === id);
+      }
+      enableRecomputeIfReady();
+    });
+  }
+
+  el<HTMLInputElement>('insp-vs-live')?.addEventListener('change', e => {
+    _vsLiveMode = (e.target as HTMLInputElement).checked;
+    // If turning off, drop any pending compute so the loop exits.
+    if (!_vsLiveMode) _vsLivePending = null;
+  });
 
   const chart = svgEl('insp-profile-chart');
   if (chart) {
@@ -108,11 +165,16 @@ export function attachInspect(map: MaplibreMap): void {
   _clickHandler = (e: maplibregl.MapMouseEvent): void => {
     if (!_active) return;
     if (_tool === 'spot') handleSpotClick(e.lngLat);
-    else handleProfileClick(e.lngLat);
+    else if (_tool === 'profile') handleProfileClick(e.lngLat);
+    else if (_tool === 'viewshed') handleViewshedClick(e.lngLat);
   };
   _moveHandler = (e: maplibregl.MapMouseEvent): void => {
-    if (!_active || _tool !== 'spot' || _spotMarker) return;
-    renderSpotDetail(e.lngLat, queryElevation(e.lngLat));
+    if (!_active) return;
+    if (_tool === 'spot' && !_spotMarker) {
+      renderSpotDetail(e.lngLat, queryElevation(e.lngLat));
+    } else if (_tool === 'viewshed' && _vsLiveMode) {
+      scheduleLivePreview(e.lngLat);
+    }
   };
   map.on('click', _clickHandler);
   map.on('mousemove', _moveHandler);
@@ -144,6 +206,9 @@ export function setInspectActiveSrc(src: DemDsm): void {
     const ll = _spotMarker.getLngLat();
     renderSpotDetail(ll, queryElevation(ll));
   }
+  // If a viewshed is pinned, recompute it against the new dataset — DEM vs DSM
+  // is the meaningful axis for "what counts as a blocker" (canopy/buildings).
+  if (_vsViewpoint) void runViewshed(_vsViewpoint);
 }
 
 // ── ELEVATION QUERY ───────────────────────────────────────────────────────────
@@ -167,9 +232,10 @@ function queryElevation(lngLat: LngLatLike): number | null {
 
 function setTool(t: Tool): void {
   if (t === _tool) return;
-  // Switching tools clears the other tool's on-map state.
-  if (t === 'spot') clearProfile();
-  else clearSpot();
+  // Switching tools clears the other tools' on-map state.
+  if (t !== 'spot') clearSpot();
+  if (t !== 'profile') clearProfile();
+  if (t !== 'viewshed') clearViewshed();
   _tool = t;
   refreshToolUI();
 }
@@ -177,6 +243,7 @@ function setTool(t: Tool): void {
 function refreshToolUI(): void {
   el<HTMLButtonElement>('insp-tool-spot')?.classList.toggle('active', _tool === 'spot');
   el<HTMLButtonElement>('insp-tool-profile')?.classList.toggle('active', _tool === 'profile');
+  el<HTMLButtonElement>('insp-tool-viewshed')?.classList.toggle('active', _tool === 'viewshed');
 
   // Spot panel is always shown when the spot tool is active — live readout when
   // unpinned, frozen reading when a marker is dropped.
@@ -188,6 +255,11 @@ function refreshToolUI(): void {
   const inProfile = _tool === 'profile';
   el<HTMLDivElement>('insp-profile-hint')?.classList.toggle('hidden', !inProfile || hasProfile);
   el<HTMLDivElement>('insp-profile-detail')?.classList.toggle('hidden', !inProfile || !hasProfile);
+
+  const inViewshed = _tool === 'viewshed';
+  const hasViewshed = _vsViewpoint !== null;
+  el<HTMLDivElement>('insp-vs-hint')?.classList.toggle('hidden', !inViewshed || hasViewshed);
+  el<HTMLDivElement>('insp-vs-detail')?.classList.toggle('hidden', !inViewshed || !hasViewshed);
 }
 
 // ── SPOT TOOL ─────────────────────────────────────────────────────────────────
@@ -497,4 +569,163 @@ function haversineMetres(lng1: number, lat1: number, lng2: number, lat2: number)
 function formatDistance(m: number): string {
   if (m < 1000) return `${m.toFixed(0)} m`;
   return `${(m / 1000).toFixed(2)} km`;
+}
+
+// ── VIEWSHED TOOL ─────────────────────────────────────────────────────────────
+
+function handleViewshedClick(lngLat: LngLat): void {
+  if (!_map) return;
+  if (_vsComputing) return; // ignore clicks mid-compute
+  setViewshedMarker(lngLat);
+  _vsViewpoint = lngLat;
+  // Show the result panel immediately so the user can see "computing" feedback.
+  refreshToolUI();
+  void runViewshed(lngLat);
+}
+
+function setViewshedMarker(lngLat: LngLat): void {
+  if (!_map) return;
+  if (_vsMarker) _vsMarker.setLngLat(lngLat);
+  else _vsMarker = new maplibregl.Marker({ color: '#00425d' }).setLngLat(lngLat).addTo(_map);
+}
+
+async function runViewshed(viewpoint: LngLat): Promise<void> {
+  if (!_map) return;
+  const gen = ++_vsGen;
+  _vsComputing = true;
+  setViewshedStatus('Loading DEM tiles…');
+  setRecomputeEnabled(false);
+  const tStart = performance.now();
+  try {
+    const result = await computeViewshed({
+      src: _activeSrc,
+      lng: viewpoint.lng,
+      lat: viewpoint.lat,
+      radiusM: VS_RADIUS_M,
+      gridM: _vsGridM,
+      eyeHeightM: _vsEyeM,
+      targetHeightM: 0,
+      earthCurvature: true,
+      sourceZoom: 14,
+      ddaStride: 1,
+    });
+    if (gen !== _vsGen || !_map) return; // a newer compute / clear superseded us
+    mountViewshedOverlay(_map, result);
+    renderViewshedResult(viewpoint, result);
+    console.log(
+      `[viewshed] pinned ${_vsGridM}m stride=1: compute ${result.computeMs.toFixed(0)}ms / total ${(performance.now() - tStart).toFixed(0)}ms`,
+    );
+  } catch (err) {
+    console.error('Viewshed compute failed:', err);
+    setViewshedStatus('Failed — see console');
+  } finally {
+    if (gen === _vsGen) {
+      _vsComputing = false;
+      setRecomputeEnabled(true);
+    }
+  }
+}
+
+/** Record the latest cursor position and kick the drain loop if it's idle. */
+function scheduleLivePreview(ll: LngLat): void {
+  if (_vsComputing) return; // a pinned compute is in flight — don't fight it
+  _vsLivePending = ll;
+  if (!_vsLiveBusy) void drainLivePreview();
+}
+
+/**
+ * Drain pending mouse positions one-at-a-time. While Live mode is on and the
+ * mouse keeps moving, this loops; otherwise it exits and waits for the next
+ * mousemove to re-enter.
+ */
+async function drainLivePreview(): Promise<void> {
+  _vsLiveBusy = true;
+  try {
+    while (_vsLiveMode && _vsLivePending && _map && !_vsComputing) {
+      const ll = _vsLivePending;
+      _vsLivePending = null;
+      const tStart = performance.now();
+      try {
+        const result = await computeViewshed({
+          src: _activeSrc,
+          lng: ll.lng,
+          lat: ll.lat,
+          radiusM: VS_RADIUS_M,
+          gridM: VS_LIVE_GRID_M,
+          eyeHeightM: _vsEyeM,
+          targetHeightM: 0,
+          earthCurvature: true,
+          sourceZoom: 14,
+          ddaStride: VS_LIVE_DDA_STRIDE,
+        });
+        // If the user toggled Live off mid-compute, or kicked a pinned
+        // compute, throw away the result rather than overwriting.
+        if (_vsLiveMode && !_vsComputing && _map) {
+          mountViewshedOverlay(_map, result);
+          console.log(
+            `[viewshed] live ${VS_LIVE_GRID_M}m stride=${VS_LIVE_DDA_STRIDE}: compute ${result.computeMs.toFixed(0)}ms / total ${(performance.now() - tStart).toFixed(0)}ms`,
+          );
+        }
+      } catch (err) {
+        console.warn('Live preview compute failed:', err);
+      }
+    }
+  } finally {
+    _vsLiveBusy = false;
+  }
+}
+
+function renderViewshedResult(viewpoint: LngLat, result: ViewshedResult): void {
+  const pt = el<HTMLSpanElement>('insp-vs-point');
+  if (pt) pt.textContent = `${viewpoint.lat.toFixed(5)}, ${viewpoint.lng.toFixed(5)}`;
+
+  // Visible cells / cells inside the circular radius (not the full square).
+  const half = Math.floor(result.width / 2);
+  const radiusCellsSq = half * half;
+  let cellsInCircle = 0;
+  for (let gy = -half; gy <= half; gy++) {
+    for (let gx = -half; gx <= half; gx++) {
+      if (gx * gx + gy * gy <= radiusCellsSq) cellsInCircle++;
+    }
+  }
+  // Count painted pixels by scanning alpha channel.
+  const data = result.image.data;
+  let visible = 0;
+  for (let i = 3; i < data.length; i += 4) if (data[i]! > 0) visible++;
+  const pct = cellsInCircle > 0 ? (visible / cellsInCircle) * 100 : 0;
+
+  const visEl = el<HTMLSpanElement>('insp-vs-visible');
+  if (visEl) visEl.textContent = `${pct.toFixed(1)} % (${visible.toLocaleString()} cells)`;
+
+  const cmpEl = el<HTMLSpanElement>('insp-vs-compute');
+  if (cmpEl) cmpEl.textContent = `${result.computeMs.toFixed(0)} ms`;
+}
+
+function setViewshedStatus(msg: string): void {
+  const cmpEl = el<HTMLSpanElement>('insp-vs-compute');
+  if (cmpEl) cmpEl.textContent = msg;
+}
+
+function setRecomputeEnabled(on: boolean): void {
+  const btn = el<HTMLButtonElement>('insp-vs-recompute');
+  if (btn) btn.disabled = !on;
+}
+
+function enableRecomputeIfReady(): void {
+  if (_vsViewpoint && !_vsComputing) setRecomputeEnabled(true);
+}
+
+function clearViewshed(): void {
+  _vsGen++; // invalidate any in-flight compute
+  _vsComputing = false;
+  _vsViewpoint = null;
+  // Drop any pending live-preview request; the drain loop will exit on its own.
+  _vsLivePending = null;
+  if (_vsMarker) {
+    _vsMarker.remove();
+    _vsMarker = null;
+  }
+  if (_map) unmountViewshedOverlay(_map);
+  setRecomputeEnabled(false);
+  refreshToolUI();
 }

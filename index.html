@@ -898,8 +898,9 @@
             <div>
               <div class="sec-lbl">Tool</div>
               <div class="dem-dsm-toggle">
-                <button class="dsm-btn active" id="insp-tool-spot">Spot elevation</button>
+                <button class="dsm-btn active" id="insp-tool-spot">Spot</button>
                 <button class="dsm-btn" id="insp-tool-profile">Profile</button>
+                <button class="dsm-btn" id="insp-tool-viewshed">Viewshed</button>
               </div>
             </div>
 
@@ -950,6 +951,56 @@
                 ><span class="insp-val" id="insp-profile-delta"></span>
               </div>
               <button class="insp-clear-btn" id="insp-profile-clear">✕ Clear</button>
+            </div>
+
+            <div id="insp-vs-hint" class="insp-hint hidden">
+              Click a point on the map to compute the visible area within 5 km.
+            </div>
+            <div id="insp-vs-detail" class="insp-detail hidden">
+              <div class="sec-lbl">Viewshed</div>
+              <div class="insp-row">
+                <span class="insp-lbl">Viewpoint</span
+                ><span class="insp-val" id="insp-vs-point">—</span>
+              </div>
+              <div class="insp-row">
+                <span class="insp-lbl">Visible</span
+                ><span class="insp-val" id="insp-vs-visible">—</span>
+              </div>
+              <div class="insp-row">
+                <span class="insp-lbl">Compute</span
+                ><span class="insp-val" id="insp-vs-compute">—</span>
+              </div>
+
+              <div class="sl-wrap">
+                <div class="opt-row">
+                  <label for="insp-vs-eye">Eye height</label>
+                  <span class="sl-val" id="insp-vs-eye-v">1.7 m</span>
+                </div>
+                <input type="range" id="insp-vs-eye" min="0" max="50" value="1.7" step="0.1" />
+              </div>
+
+              <div class="sec-lbl" style="margin-top: 8px">Grid resolution</div>
+              <div class="dem-dsm-toggle">
+                <button class="dsm-btn active" id="insp-vs-grid-100" data-gridm="100">100 m</button>
+                <button class="dsm-btn" id="insp-vs-grid-30" data-gridm="30">30 m</button>
+              </div>
+
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  margin-top: 10px;
+                  font-size: 12px;
+                  cursor: pointer;
+                "
+              >
+                <input type="checkbox" id="insp-vs-live" />
+                Live preview (hover the map)
+              </label>
+
+              <button class="apply-btn" id="insp-vs-recompute" disabled>Recompute</button>
+              <button class="insp-clear-btn" id="insp-vs-clear">✕ Clear</button>
             </div>
 
             <p style="font-size: 10px; color: #bbb; line-height: 1.5; padding-bottom: 4px">
