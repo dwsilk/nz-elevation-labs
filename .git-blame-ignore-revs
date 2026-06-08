@@ -8,5 +8,5 @@
 # Each entry: SHA on its own line, optionally preceded by a `# what & why` comment.
 
 # Initial Prettier reformat across the repo (printWidth 100, single-quote,
-# no-paren arrows). Replace this placeholder with the actual SHA after committing.
-# REPLACE_WITH_REFORMAT_COMMIT_SHA
+# no-paren arrows).
+db5ce81840dce9ea2770b2b5fbfb578bd1730b83
