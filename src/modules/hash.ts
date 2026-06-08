@@ -28,5 +28,9 @@ export function setHashParam(key: string, value: string | null): void {
   else params[key] = value;
   const parts = Object.entries(params).map(([k, v]) => (v === '' ? k : `${k}=${v}`));
   const newHash = parts.length ? `#${parts.join('&')}` : '';
-  window.history.replaceState(window.history.state, '', window.location.href.replace(/(#.*)?$/, newHash));
+  window.history.replaceState(
+    window.history.state,
+    '',
+    window.location.href.replace(/(#.*)?$/, newHash),
+  );
 }

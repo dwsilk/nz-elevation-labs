@@ -1,40 +1,80 @@
 /* ── EXPORT TAB ── */
 
 .exp-progress {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 8px 12px; background: var(--blue-lt);
-  border: 1px solid var(--bdr); border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--blue-lt);
+  border: 1px solid var(--bdr);
+  border-radius: 4px;
 }
 .exp-progress-count {
-  font-size: 12px; font-weight: 500; color: var(--navy);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--navy);
   font-variant-numeric: tabular-nums;
 }
 
 .exp-detail {
-  background: #fff; border: 1px solid var(--bdr); border-radius: 4px;
-  padding: 12px; display: flex; flex-direction: column; gap: 10px;
+  background: #fff;
+  border: 1px solid var(--bdr);
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.exp-detail-inner { display: flex; flex-direction: column; gap: 6px; }
+.exp-detail-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
 .exp-row {
-  display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
   font-size: 12px;
 }
-.exp-lbl { color: var(--mid); font-weight: 500; }
-.exp-val { color: var(--navy); font-weight: 500; text-align: right; word-break: break-all; }
+.exp-lbl {
+  color: var(--mid);
+  font-weight: 500;
+}
+.exp-val {
+  color: var(--navy);
+  font-weight: 500;
+  text-align: right;
+  word-break: break-all;
+}
 
 .exp-dl-btn {
-  display: block; padding: 9px 12px;
-  background: var(--blue); color: #fff;
-  text-align: center; text-decoration: none; border-radius: 4px;
-  font-size: 12px; font-weight: 500;
-  transition: background .15s;
+  display: block;
+  padding: 9px 12px;
+  background: var(--blue);
+  color: #fff;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.15s;
 }
-.exp-dl-btn:hover { background: var(--navy); }
+.exp-dl-btn:hover {
+  background: var(--navy);
+}
 
 .exp-clear-btn {
-  background: none; border: none; color: var(--mid);
-  cursor: pointer; font-size: 11px; padding: 2px 0; text-align: left;
-  transition: color .15s;
+  background: none;
+  border: none;
+  color: var(--mid);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 0;
+  text-align: left;
+  transition: color 0.15s;
 }
-.exp-clear-btn:hover { color: var(--navy); }
+.exp-clear-btn:hover {
+  color: var(--navy);
+}

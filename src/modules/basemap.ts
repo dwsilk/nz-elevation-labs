@@ -19,8 +19,10 @@
  * to LINZ in main.ts so their text and icons resolve.
  */
 import type {
-  Map as MaplibreMap, IControl,
-  StyleSpecification, LayerSpecification,
+  Map as MaplibreMap,
+  IControl,
+  StyleSpecification,
+  LayerSpecification,
 } from 'maplibre-gl';
 import { API, ELEV_URL, DSM_URL } from './config.js';
 
@@ -36,25 +38,41 @@ interface BasemapDef {
   url?: string;
 }
 
-const BM_PREFIX  = 'bm-';
+const BM_PREFIX = 'bm-';
 const LBL_PREFIX = 'lbl-';
 /** Prefix for non-basemap, non-label overlays managed by this module
  *  (currently just the Hillshade Blend tints). Layers here sit ABOVE the
  *  side-panel mode layers but BELOW labels. */
-const OV_PREFIX  = 'ov-';
+const OV_PREFIX = 'ov-';
 
 export type HillshadeBlend = 'none' | 'dem' | 'dsm';
 
 const BASEMAPS: BasemapDef[] = [
-  { id: 'none',          label: 'None',                kind: 'none' },
-  { id: 'aerial',        label: 'Aerial Imagery',     kind: 'raster',
-    url: `https://basemaps.linz.govt.nz/v1/tiles/aerial/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}` },
-  { id: 'hillshade-dem', label: 'DEM Hillshade · Igor', kind: 'raster',
-    url: `https://basemaps.linz.govt.nz/v1/tiles/hillshade-igor/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}` },
-  { id: 'hillshade-dsm', label: 'DSM Hillshade · Igor', kind: 'raster',
-    url: `https://basemaps.linz.govt.nz/v1/tiles/hillshade-igor-dsm/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}` },
-  { id: 'topolite',      label: 'Topolite',            kind: 'vector-style',
-    url: `https://basemaps.linz.govt.nz/v1/styles/topolite-v2.json?api=${API}` },
+  { id: 'none', label: 'None', kind: 'none' },
+  {
+    id: 'aerial',
+    label: 'Aerial Imagery',
+    kind: 'raster',
+    url: `https://basemaps.linz.govt.nz/v1/tiles/aerial/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}`,
+  },
+  {
+    id: 'hillshade-dem',
+    label: 'DEM Hillshade · Igor',
+    kind: 'raster',
+    url: `https://basemaps.linz.govt.nz/v1/tiles/hillshade-igor/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}`,
+  },
+  {
+    id: 'hillshade-dsm',
+    label: 'DSM Hillshade · Igor',
+    kind: 'raster',
+    url: `https://basemaps.linz.govt.nz/v1/tiles/hillshade-igor-dsm/WebMercatorQuad/{z}/{x}/{y}.webp?api=${API}`,
+  },
+  {
+    id: 'topolite',
+    label: 'Topolite',
+    kind: 'vector-style',
+    url: `https://basemaps.linz.govt.nz/v1/styles/topolite-v2.json?api=${API}`,
+  },
 ];
 
 const DEFAULT_BASEMAP: BasemapId = 'none';
@@ -132,7 +150,10 @@ export function isBasemapOrLabelLayer(id: string): boolean {
 /** Move all label layers to the top of the stack — call after any layer add. */
 export function moveLabelsToTop(): void {
   if (!_map || !_labelsOn) return;
-  const order = _map.getStyle().layers.map(l => l.id).filter(id => id.startsWith(LBL_PREFIX));
+  const order = _map
+    .getStyle()
+    .layers.map(l => l.id)
+    .filter(id => id.startsWith(LBL_PREFIX));
   for (const id of order) _map.moveLayer(id);
 }
 
@@ -159,14 +180,26 @@ async function applyBasemap(): Promise<void> {
     const sid = `${BM_PREFIX}${def.id}-src`;
     const lid = `${BM_PREFIX}${def.id}`;
     _map.addSource(sid, {
-      type: 'raster', tiles: [def.url!], tileSize: 256,
+      type: 'raster',
+      tiles: [def.url!],
+      tileSize: 256,
       attribution: '© Land Information New Zealand CC BY 4.0',
     });
-    _map.addLayer({ id: lid, type: 'raster', source: sid, paint: { 'raster-opacity': 1 } }, beforeId);
+    _map.addLayer(
+      { id: lid, type: 'raster', source: sid, paint: { 'raster-opacity': 1 } },
+      beforeId,
+    );
     _basemapSourceIds.add(sid);
     _basemapLayerIds.add(lid);
   } else {
-    await injectVectorStyle(_map, def.url!, BM_PREFIX, _basemapSourceIds, _basemapLayerIds, beforeId);
+    await injectVectorStyle(
+      _map,
+      def.url!,
+      BM_PREFIX,
+      _basemapSourceIds,
+      _basemapLayerIds,
+      beforeId,
+    );
   }
 
   // If labels are on, make sure they remain on top of the new basemap.
@@ -183,7 +216,14 @@ async function applyLabels(): Promise<void> {
 
   if (!_labelsOn) return;
   // Labels go on top — no beforeId.
-  await injectVectorStyle(_map, LABELS_STYLE_URL, LBL_PREFIX, _labelSourceIds, _labelLayerIds, undefined);
+  await injectVectorStyle(
+    _map,
+    LABELS_STYLE_URL,
+    LBL_PREFIX,
+    _labelSourceIds,
+    _labelLayerIds,
+    undefined,
+  );
 }
 
 function applyHillshadeBlend(): void {
@@ -206,12 +246,17 @@ function applyHillshadeBlend(): void {
   const lid = `${OV_PREFIX}hillshade-blend-${_hillshadeBlend}`;
   const tileUrl = _hillshadeBlend === 'dsm' ? DSM_URL : ELEV_URL;
   _map.addSource(sid, {
-    type: 'raster-dem', tiles: [tileUrl], tileSize: 256, encoding: 'mapbox',
+    type: 'raster-dem',
+    tiles: [tileUrl],
+    tileSize: 256,
+    encoding: 'mapbox',
     attribution: '© Land Information New Zealand CC BY 4.0',
   });
   // Add at the top — moveLabelsToTop below restacks labels above us.
   _map.addLayer({
-    id: lid, type: 'hillshade', source: sid,
+    id: lid,
+    type: 'hillshade',
+    source: sid,
     paint: {
       'hillshade-method': 'igor',
       'hillshade-illumination-direction': 315,
@@ -266,7 +311,10 @@ async function injectVectorStyle(
   // Then layers, remapping source references and ids.
   for (const layer of style.layers ?? []) {
     if (layer.type === 'background') continue; // we have our own background
-    const remapped: LayerSpecification = { ...(layer as LayerSpecification), id: `${prefix}${layer.id}` };
+    const remapped: LayerSpecification = {
+      ...(layer as LayerSpecification),
+      id: `${prefix}${layer.id}`,
+    };
     if ('source' in remapped && remapped.source) {
       const r = srcRemap[remapped.source];
       if (r) remapped.source = r;
@@ -364,7 +412,9 @@ class BasemapControl implements IControl {
       input.name = 'basemap';
       input.value = def.id;
       input.checked = _activeBasemap === def.id;
-      input.addEventListener('change', () => { if (input.checked) setBasemap(def.id); });
+      input.addEventListener('change', () => {
+        if (input.checked) setBasemap(def.id);
+      });
       const lbl = document.createElement('span');
       lbl.textContent = def.label;
       opt.append(input, lbl);

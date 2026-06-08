@@ -21,10 +21,19 @@
  * Selecting one tool clears the other's on-map state (marker / line).
  */
 import maplibregl, {
-  type Map as MaplibreMap, type LngLat, type LngLatLike, type Marker, type GeoJSONSource,
+  type Map as MaplibreMap,
+  type LngLat,
+  type LngLatLike,
+  type Marker,
+  type GeoJSONSource,
 } from 'maplibre-gl';
 import type { FeatureCollection, LineString } from 'geojson';
-import { INSPECT_LINE_SOURCE, INSPECT_LINE_LAYER, INSPECT_PROFILE_SAMPLES, type DemDsm } from './config.js';
+import {
+  INSPECT_LINE_SOURCE,
+  INSPECT_LINE_LAYER,
+  INSPECT_PROFILE_SAMPLES,
+  type DemDsm,
+} from './config.js';
 import { demHeightAt, demHeightAtAsync } from './dem-cache.js';
 
 type Tool = 'spot' | 'profile';
@@ -54,10 +63,15 @@ let _profileGen = 0;
 
 // Bound listener references for clean removal.
 let _clickHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
-let _moveHandler:  ((e: maplibregl.MapMouseEvent) => void) | null = null;
+let _moveHandler: ((e: maplibregl.MapMouseEvent) => void) | null = null;
 
 // Chart layout constants — keep in one place so onChartMove and renderProfileChart agree.
-const CH_W = 300, CH_H = 120, CH_PAD_T = 6, CH_PAD_B = 8, CH_PAD_L = 32, CH_PAD_R = 6;
+const CH_W = 300,
+  CH_H = 120,
+  CH_PAD_T = 6,
+  CH_PAD_B = 8,
+  CH_PAD_L = 32,
+  CH_PAD_R = 6;
 const CH_INNER_W = CH_W - CH_PAD_L - CH_PAD_R;
 const CH_INNER_H = CH_H - CH_PAD_T - CH_PAD_B;
 
@@ -94,7 +108,7 @@ export function attachInspect(map: MaplibreMap): void {
   _clickHandler = (e: maplibregl.MapMouseEvent): void => {
     if (!_active) return;
     if (_tool === 'spot') handleSpotClick(e.lngLat);
-    else                  handleProfileClick(e.lngLat);
+    else handleProfileClick(e.lngLat);
   };
   _moveHandler = (e: maplibregl.MapMouseEvent): void => {
     if (!_active || _tool !== 'spot' || _spotMarker) return;
@@ -108,8 +122,14 @@ export function attachInspect(map: MaplibreMap): void {
 
 export function detachInspect(map: MaplibreMap): void {
   _active = false;
-  if (_clickHandler) { map.off('click', _clickHandler); _clickHandler = null; }
-  if (_moveHandler)  { map.off('mousemove', _moveHandler); _moveHandler = null; }
+  if (_clickHandler) {
+    map.off('click', _clickHandler);
+    _clickHandler = null;
+  }
+  if (_moveHandler) {
+    map.off('mousemove', _moveHandler);
+    _moveHandler = null;
+  }
   clearHoverMarker();
 }
 
@@ -133,9 +153,13 @@ export function setInspectActiveSrc(src: DemDsm): void {
 // next call will hit cache.
 function queryElevation(lngLat: LngLatLike): number | null {
   if (!_map) return null;
-  const ll = (lngLat as LngLat).lng !== undefined
-    ? (lngLat as LngLat)
-    : { lng: (lngLat as { lng: number; lat: number }).lng, lat: (lngLat as { lng: number; lat: number }).lat };
+  const ll =
+    (lngLat as LngLat).lng !== undefined
+      ? (lngLat as LngLat)
+      : {
+          lng: (lngLat as { lng: number; lat: number }).lng,
+          lat: (lngLat as { lng: number; lat: number }).lat,
+        };
   return demHeightAt(_activeSrc, ll.lng, ll.lat, _map.getZoom());
 }
 
@@ -144,8 +168,8 @@ function queryElevation(lngLat: LngLatLike): number | null {
 function setTool(t: Tool): void {
   if (t === _tool) return;
   // Switching tools clears the other tool's on-map state.
-  if (t === 'spot')   clearProfile();
-  else                clearSpot();
+  if (t === 'spot') clearProfile();
+  else clearSpot();
   _tool = t;
   refreshToolUI();
 }
@@ -193,14 +217,17 @@ function handleSpotClick(lngLat: LngLat): void {
 function renderSpotDetail(lngLat: LngLat | null, elev: number | null): void {
   const lat = el<HTMLSpanElement>('insp-spot-lat');
   const lng = el<HTMLSpanElement>('insp-spot-lng');
-  const ev  = el<HTMLSpanElement>('insp-spot-elev');
+  const ev = el<HTMLSpanElement>('insp-spot-elev');
   if (lat) lat.textContent = lngLat ? lngLat.lat.toFixed(6) + '°' : '—';
   if (lng) lng.textContent = lngLat ? lngLat.lng.toFixed(6) + '°' : '—';
-  if (ev)  ev.textContent  = elev === null ? '—' : `${elev.toFixed(1)} m`;
+  if (ev) ev.textContent = elev === null ? '—' : `${elev.toFixed(1)} m`;
 }
 
 function clearSpot(): void {
-  if (_spotMarker) { _spotMarker.remove(); _spotMarker = null; }
+  if (_spotMarker) {
+    _spotMarker.remove();
+    _spotMarker = null;
+  }
   renderSpotDetail(null, null);
 }
 
@@ -211,12 +238,16 @@ function handleProfileClick(lngLat: LngLat): void {
   if (_profileStart && _profileEnd) clearProfile();
   if (!_profileStart) {
     _profileStart = lngLat;
-    _profileStartMarker = new maplibregl.Marker({ color: '#0064c8', scale: 0.7 }).setLngLat(lngLat).addTo(_map);
+    _profileStartMarker = new maplibregl.Marker({ color: '#0064c8', scale: 0.7 })
+      .setLngLat(lngLat)
+      .addTo(_map);
     refreshToolUI();
     return;
   }
   _profileEnd = lngLat;
-  _profileEndMarker = new maplibregl.Marker({ color: '#00335b', scale: 0.7 }).setLngLat(lngLat).addTo(_map);
+  _profileEndMarker = new maplibregl.Marker({ color: '#00335b', scale: 0.7 })
+    .setLngLat(lngLat)
+    .addTo(_map);
   drawProfileLine();
   void sampleAndRenderProfile();
   refreshToolUI();
@@ -226,8 +257,14 @@ function clearProfile(): void {
   _profileStart = null;
   _profileEnd = null;
   _profileSamples = [];
-  if (_profileStartMarker) { _profileStartMarker.remove(); _profileStartMarker = null; }
-  if (_profileEndMarker)   { _profileEndMarker.remove();   _profileEndMarker = null; }
+  if (_profileStartMarker) {
+    _profileStartMarker.remove();
+    _profileStartMarker = null;
+  }
+  if (_profileEndMarker) {
+    _profileEndMarker.remove();
+    _profileEndMarker = null;
+  }
   clearHoverMarker();
   setLineData([]);
   el<HTMLDivElement>('insp-profile-detail')?.classList.add('hidden');
@@ -236,14 +273,18 @@ function clearProfile(): void {
 
 function drawProfileLine(): void {
   if (!_profileStart || !_profileEnd) return;
-  setLineData([[_profileStart.lng, _profileStart.lat], [_profileEnd.lng, _profileEnd.lat]]);
+  setLineData([
+    [_profileStart.lng, _profileStart.lat],
+    [_profileEnd.lng, _profileEnd.lat],
+  ]);
 }
 
 async function sampleAndRenderProfile(): Promise<void> {
   if (!_map || !_profileStart || !_profileEnd) return;
   const gen = ++_profileGen;
   const N = INSPECT_PROFILE_SAMPLES;
-  const s = _profileStart, e = _profileEnd;
+  const s = _profileStart,
+    e = _profileEnd;
   const totalM = haversineMetres(s.lng, s.lat, e.lng, e.lat);
   const z = _map.getZoom();
   // Sample in parallel — dem-cache dedupes per-tile so 256 lookups across a
@@ -251,7 +292,12 @@ async function sampleAndRenderProfile(): Promise<void> {
   const elevs = await Promise.all(
     Array.from({ length: N }, (_, i) => {
       const t = i / (N - 1);
-      return demHeightAtAsync(_activeSrc, s.lng + (e.lng - s.lng) * t, s.lat + (e.lat - s.lat) * t, z);
+      return demHeightAtAsync(
+        _activeSrc,
+        s.lng + (e.lng - s.lng) * t,
+        s.lat + (e.lat - s.lat) * t,
+        z,
+      );
     }),
   );
   if (gen !== _profileGen) return; // a newer profile started while we were fetching
@@ -271,18 +317,25 @@ function renderProfileChart(totalM: number): void {
   const svg = svgEl('insp-profile-chart');
   if (!svg) return;
 
-  const valid = _profileSamples.filter(s => s.elev !== null) as Array<{ elev: number; distM: number }>;
+  const valid = _profileSamples.filter(s => s.elev !== null) as Array<{
+    elev: number;
+    distM: number;
+  }>;
   if (valid.length === 0) {
     svg.innerHTML = `<text x="${CH_W / 2}" y="${CH_H / 2}" text-anchor="middle" font-size="11" fill="#888">No elevation data along this line</text>`;
     return;
   }
 
-  let rawMin = Infinity, rawMax = -Infinity;
-  for (const v of valid) { if (v.elev < rawMin) rawMin = v.elev; if (v.elev > rawMax) rawMax = v.elev; }
+  let rawMin = Infinity,
+    rawMax = -Infinity;
+  for (const v of valid) {
+    if (v.elev < rawMin) rawMin = v.elev;
+    if (v.elev > rawMax) rawMax = v.elev;
+  }
 
   // Snap to nearest 100 m below / above.
   const yMin = Math.floor(rawMin / 100) * 100;
-  let yMax = Math.ceil (rawMax / 100) * 100;
+  let yMax = Math.ceil(rawMax / 100) * 100;
   if (yMax === yMin) yMax = yMin + 100; // ensure at least one 100 m step
   const yRange = yMax - yMin;
 
@@ -291,7 +344,7 @@ function renderProfileChart(totalM: number): void {
   const labelStep = yRange <= 700 ? 100 : yRange <= 1500 ? 200 : yRange <= 3500 ? 500 : 1000;
 
   const xAt = (distM: number): number => CH_PAD_L + (distM / totalM) * CH_INNER_W;
-  const yAt = (elev: number):  number => CH_PAD_T + (1 - (elev - yMin) / yRange) * CH_INNER_H;
+  const yAt = (elev: number): number => CH_PAD_T + (1 - (elev - yMin) / yRange) * CH_INNER_H;
 
   // Gridlines + axis labels.
   let grid = '';
@@ -307,13 +360,21 @@ function renderProfileChart(totalM: number): void {
   let d = '';
   let gap = true;
   for (const s of _profileSamples) {
-    if (s.elev === null) { gap = true; continue; }
-    if (gap) { d += `M${xAt(s.distM).toFixed(1)} ${yAt(s.elev).toFixed(1)}`; gap = false; }
-    else     { d += ` L${xAt(s.distM).toFixed(1)} ${yAt(s.elev).toFixed(1)}`; }
+    if (s.elev === null) {
+      gap = true;
+      continue;
+    }
+    if (gap) {
+      d += `M${xAt(s.distM).toFixed(1)} ${yAt(s.elev).toFixed(1)}`;
+      gap = false;
+    } else {
+      d += ` L${xAt(s.distM).toFixed(1)} ${yAt(s.elev).toFixed(1)}`;
+    }
   }
 
   // Subtle fill under the curve, anchored at the bottom of the chart.
-  const first = valid[0]!, last = valid[valid.length - 1]!;
+  const first = valid[0]!,
+    last = valid[valid.length - 1]!;
   const fill = `${d} L${xAt(last.distM).toFixed(1)} ${(CH_PAD_T + CH_INNER_H).toFixed(1)} L${xAt(first.distM).toFixed(1)} ${(CH_PAD_T + CH_INNER_H).toFixed(1)} Z`;
 
   svg.innerHTML =
@@ -323,10 +384,10 @@ function renderProfileChart(totalM: number): void {
     `<line id="insp-profile-crosshair" x1="0" y1="${CH_PAD_T}" x2="0" y2="${CH_PAD_T + CH_INNER_H}" stroke="#0064c8" stroke-width="1" visibility="hidden"/>` +
     `<text id="insp-profile-crosshair-lbl" font-size="10" font-weight="600" fill="#00335b" font-family="var(--font,sans-serif)" visibility="hidden"></text>`;
 
-  const lenEl   = el<HTMLSpanElement>('insp-profile-len');
+  const lenEl = el<HTMLSpanElement>('insp-profile-len');
   const rangeEl = el<HTMLSpanElement>('insp-profile-range');
   const deltaEl = el<HTMLSpanElement>('insp-profile-delta');
-  if (lenEl)   lenEl.textContent   = formatDistance(totalM);
+  if (lenEl) lenEl.textContent = formatDistance(totalM);
   if (rangeEl) rangeEl.textContent = `${rawMin.toFixed(0)} m / ${rawMax.toFixed(0)} m`;
   if (deltaEl) deltaEl.textContent = `${(rawMax - rawMin).toFixed(0)} m`;
 }
@@ -346,7 +407,8 @@ function onChartMove(e: MouseEvent): void {
   const ll: LngLatLike = { lng: sample.lng, lat: sample.lat };
   if (!_profileHoverMarker) {
     const dot = document.createElement('div');
-    dot.style.cssText = 'width:12px;height:12px;border-radius:50%;background:#0064c8;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.3);pointer-events:none';
+    dot.style.cssText =
+      'width:12px;height:12px;border-radius:50%;background:#0064c8;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,0.3);pointer-events:none';
     _profileHoverMarker = new maplibregl.Marker({ element: dot }).setLngLat(ll).addTo(_map);
   } else {
     _profileHoverMarker.setLngLat(ll);
@@ -354,7 +416,7 @@ function onChartMove(e: MouseEvent): void {
 
   // SVG crosshair line + elevation label.
   const x = CH_PAD_L + t * CH_INNER_W;
-  const ch  = document.getElementById('insp-profile-crosshair');
+  const ch = document.getElementById('insp-profile-crosshair');
   const lbl = document.getElementById('insp-profile-crosshair-lbl');
   if (ch) {
     ch.setAttribute('x1', x.toFixed(1));
@@ -377,7 +439,10 @@ function onChartMove(e: MouseEvent): void {
 }
 
 function clearHoverMarker(): void {
-  if (_profileHoverMarker) { _profileHoverMarker.remove(); _profileHoverMarker = null; }
+  if (_profileHoverMarker) {
+    _profileHoverMarker.remove();
+    _profileHoverMarker = null;
+  }
   document.getElementById('insp-profile-crosshair')?.setAttribute('visibility', 'hidden');
   document.getElementById('insp-profile-crosshair-lbl')?.setAttribute('visibility', 'hidden');
 }
@@ -420,10 +485,12 @@ function setLineData(coords: number[][]): void {
 
 function haversineMetres(lng1: number, lat1: number, lng2: number, lat2: number): number {
   const R = 6371008.8;
-  const toRad = (d: number): number => d * Math.PI / 180;
+  const toRad = (d: number): number => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
-  const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 

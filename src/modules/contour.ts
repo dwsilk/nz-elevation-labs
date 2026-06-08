@@ -38,49 +38,89 @@ export interface ContourPreset {
 // ── PRESETS ───────────────────────────────────────────────────────────────────
 
 const DEFAULT_THRESHOLDS: ThresholdMap = {
-  1: [500, 1000], 8: [200, 500], 10: [100, 500],
-  11: [50, 200], 12: [20, 100], 13: [10, 50],
+  1: [500, 1000],
+  8: [200, 500],
+  10: [100, 500],
+  11: [50, 200],
+  12: [20, 100],
+  13: [10, 50],
 };
 
 export const CT_PRESETS: Record<string, ContourPreset> = {
   standard: {
     thresholds: { ...DEFAULT_THRESHOLDS },
     config: {
-      minorColor: '#999999', majorColor: '#444444',
-      minorWidth: 1, majorWidth: 2, opacity: 0.8,
-      labelColor: '#333333', textSize: 11, labelOpacity: 0.9,
-      font: 'Open Sans Bold', placement: 'line',
-      haloColor: '#ffffff', haloWidth: 2, haloBlur: 0, showLabels: true,
+      minorColor: '#999999',
+      majorColor: '#444444',
+      minorWidth: 1,
+      majorWidth: 2,
+      opacity: 0.8,
+      labelColor: '#333333',
+      textSize: 11,
+      labelOpacity: 0.9,
+      font: 'Open Sans Bold',
+      placement: 'line',
+      haloColor: '#ffffff',
+      haloWidth: 2,
+      haloBlur: 0,
+      showLabels: true,
     },
   },
   topo50: {
     thresholds: { ...DEFAULT_THRESHOLDS },
     config: {
-      minorColor: '#c8a06e', majorColor: '#b07830',
-      minorWidth: 1, majorWidth: 2, opacity: 0.9,
-      labelColor: '#7a4a10', textSize: 10, labelOpacity: 1.0,
-      font: 'Open Sans Regular', placement: 'line',
-      haloColor: '#f0e8d0', haloWidth: 2, haloBlur: 0.5, showLabels: true,
+      minorColor: '#c8a06e',
+      majorColor: '#b07830',
+      minorWidth: 1,
+      majorWidth: 2,
+      opacity: 0.9,
+      labelColor: '#7a4a10',
+      textSize: 10,
+      labelOpacity: 1.0,
+      font: 'Open Sans Regular',
+      placement: 'line',
+      haloColor: '#f0e8d0',
+      haloWidth: 2,
+      haloBlur: 0.5,
+      showLabels: true,
     },
   },
   white: {
     thresholds: { ...DEFAULT_THRESHOLDS },
     config: {
-      minorColor: '#cccccc', majorColor: '#ffffff',
-      minorWidth: 1, majorWidth: 2, opacity: 0.9,
-      labelColor: '#ffffff', textSize: 11, labelOpacity: 0.95,
-      font: 'Open Sans Bold', placement: 'line',
-      haloColor: '#000000', haloWidth: 2, haloBlur: 0.5, showLabels: true,
+      minorColor: '#cccccc',
+      majorColor: '#ffffff',
+      minorWidth: 1,
+      majorWidth: 2,
+      opacity: 0.9,
+      labelColor: '#ffffff',
+      textSize: 11,
+      labelOpacity: 0.95,
+      font: 'Open Sans Bold',
+      placement: 'line',
+      haloColor: '#000000',
+      haloWidth: 2,
+      haloBlur: 0.5,
+      showLabels: true,
     },
   },
   cyan: {
     thresholds: { ...DEFAULT_THRESHOLDS },
     config: {
-      minorColor: '#80dfff', majorColor: '#00c8ff',
-      minorWidth: 1, majorWidth: 2, opacity: 0.9,
-      labelColor: '#00c8ff', textSize: 11, labelOpacity: 0.95,
-      font: 'Open Sans Bold', placement: 'line',
-      haloColor: '#000000', haloWidth: 2, haloBlur: 0.5, showLabels: true,
+      minorColor: '#80dfff',
+      majorColor: '#00c8ff',
+      minorWidth: 1,
+      majorWidth: 2,
+      opacity: 0.9,
+      labelColor: '#00c8ff',
+      textSize: 11,
+      labelOpacity: 0.95,
+      font: 'Open Sans Bold',
+      placement: 'line',
+      haloColor: '#000000',
+      haloWidth: 2,
+      haloBlur: 0.5,
+      showLabels: true,
     },
   },
 };
@@ -116,22 +156,22 @@ function getCtConfig(): ContourConfig {
   // The master "Layer opacity" multiplies through both the per-line and the
   // per-label opacity sliders, so dragging it fades the whole contour layer
   // proportionally while the per-line / per-label sliders stay meaningful.
-  const layerOp = Number((el<HTMLInputElement>('ct-layer-opacity')).value) / 100;
+  const layerOp = Number(el<HTMLInputElement>('ct-layer-opacity').value) / 100;
   return {
-    minorColor:   (el<HTMLInputElement>('ct-minor-color')).value,
-    majorColor:   (el<HTMLInputElement>('ct-major-color')).value,
-    minorWidth:   Number((el<HTMLInputElement>('ct-minor-width')).value),
-    majorWidth:   Number((el<HTMLInputElement>('ct-major-width')).value),
-    opacity:      (Number((el<HTMLInputElement>('ct-opacity')).value) / 100) * layerOp,
-    labelColor:   (el<HTMLInputElement>('ct-label-color')).value,
-    textSize:     Number((el<HTMLInputElement>('ct-text-size')).value),
-    labelOpacity: (Number((el<HTMLInputElement>('ct-label-opacity')).value) / 100) * layerOp,
-    placement:    (el<HTMLSelectElement>('sel-ct-placement')).value as 'line' | 'line-center',
-    font:         (el<HTMLSelectElement>('sel-ct-font')).value,
-    haloColor:    (el<HTMLInputElement>('ct-halo-color')).value,
-    haloWidth:    Number((el<HTMLInputElement>('ct-halo-width')).value),
-    haloBlur:     Number((el<HTMLInputElement>('ct-halo-blur')).value),
-    showLabels:   (el<HTMLInputElement>('tog-ct-labels')).checked,
+    minorColor: el<HTMLInputElement>('ct-minor-color').value,
+    majorColor: el<HTMLInputElement>('ct-major-color').value,
+    minorWidth: Number(el<HTMLInputElement>('ct-minor-width').value),
+    majorWidth: Number(el<HTMLInputElement>('ct-major-width').value),
+    opacity: (Number(el<HTMLInputElement>('ct-opacity').value) / 100) * layerOp,
+    labelColor: el<HTMLInputElement>('ct-label-color').value,
+    textSize: Number(el<HTMLInputElement>('ct-text-size').value),
+    labelOpacity: (Number(el<HTMLInputElement>('ct-label-opacity').value) / 100) * layerOp,
+    placement: el<HTMLSelectElement>('sel-ct-placement').value as 'line' | 'line-center',
+    font: el<HTMLSelectElement>('sel-ct-font').value,
+    haloColor: el<HTMLInputElement>('ct-halo-color').value,
+    haloWidth: Number(el<HTMLInputElement>('ct-halo-width').value),
+    haloBlur: Number(el<HTMLInputElement>('ct-halo-blur').value),
+    showLabels: el<HTMLInputElement>('tog-ct-labels').checked,
   };
 }
 
@@ -139,7 +179,9 @@ function getCtConfig(): ContourConfig {
 
 export function removeContourLayers(): void {
   if (!_map) return;
-  ctLayers.forEach(id => { if (_map!.getLayer(id)) _map!.removeLayer(id); });
+  ctLayers.forEach(id => {
+    if (_map!.getLayer(id)) _map!.removeLayer(id);
+  });
   if (_map.getSource('contour-source')) _map.removeSource('contour-source');
   ctLayers = [];
 }
@@ -169,12 +211,14 @@ export function addContourLayers(): void {
 
   _map.addSource('contour-source', {
     type: 'vector',
-    tiles: [demSource.contourProtocolUrl({
-      thresholds: ctThresholds,
-      contourLayer: 'contours',
-      elevationKey: 'ele',
-      levelKey: 'level',
-    })],
+    tiles: [
+      demSource.contourProtocolUrl({
+        thresholds: ctThresholds,
+        contourLayer: 'contours',
+        elevationKey: 'ele',
+        levelKey: 'level',
+      }),
+    ],
     maxzoom: 15,
   });
 
@@ -182,27 +226,41 @@ export function addContourLayers(): void {
   // skip tile fetches (and the maplibre-contour worker) — opacity-0 alone
   // still pulls vector tiles in the background.
   const linesVis = cfg.opacity > 0 ? 'visible' : 'none';
-  const labelsVis = (cfg.showLabels && cfg.labelOpacity > 0) ? 'visible' : 'none';
+  const labelsVis = cfg.showLabels && cfg.labelOpacity > 0 ? 'visible' : 'none';
 
   _map.addLayer({
-    id: 'contour-lines-minor', type: 'line',
-    source: 'contour-source', 'source-layer': 'contours',
+    id: 'contour-lines-minor',
+    type: 'line',
+    source: 'contour-source',
+    'source-layer': 'contours',
     filter: ['all', ['==', ['get', 'level'], 0], ['!=', ['get', 'ele'], 0]],
     layout: { 'line-join': 'round', 'line-cap': 'round', visibility: linesVis },
-    paint: { 'line-color': cfg.minorColor, 'line-width': cfg.minorWidth, 'line-opacity': cfg.opacity },
+    paint: {
+      'line-color': cfg.minorColor,
+      'line-width': cfg.minorWidth,
+      'line-opacity': cfg.opacity,
+    },
   });
 
   _map.addLayer({
-    id: 'contour-lines-major', type: 'line',
-    source: 'contour-source', 'source-layer': 'contours',
+    id: 'contour-lines-major',
+    type: 'line',
+    source: 'contour-source',
+    'source-layer': 'contours',
     filter: ['all', ['==', ['get', 'level'], 1], ['!=', ['get', 'ele'], 0]],
     layout: { 'line-join': 'round', 'line-cap': 'round', visibility: linesVis },
-    paint: { 'line-color': cfg.majorColor, 'line-width': cfg.majorWidth, 'line-opacity': cfg.opacity },
+    paint: {
+      'line-color': cfg.majorColor,
+      'line-width': cfg.majorWidth,
+      'line-opacity': cfg.opacity,
+    },
   });
 
   _map.addLayer({
-    id: 'contour-labels', type: 'symbol',
-    source: 'contour-source', 'source-layer': 'contours',
+    id: 'contour-labels',
+    type: 'symbol',
+    source: 'contour-source',
+    'source-layer': 'contours',
     filter: ['all', ['==', ['get', 'level'], 1], ['!=', ['get', 'ele'], 0]],
     layout: {
       'symbol-placement': cfg.placement,
@@ -232,7 +290,7 @@ export function updateContourPaint(): void {
   // (and the maplibre-contour worker stops decoding DEM tiles) when the
   // master / per-line / per-label sliders are pulled to zero.
   const linesVis = cfg.opacity > 0 ? 'visible' : 'none';
-  const labelsVis = (cfg.showLabels && cfg.labelOpacity > 0) ? 'visible' : 'none';
+  const labelsVis = cfg.showLabels && cfg.labelOpacity > 0 ? 'visible' : 'none';
 
   if (_map.getLayer('contour-lines-minor')) {
     _map.setPaintProperty('contour-lines-minor', 'line-color', cfg.minorColor);
@@ -278,10 +336,36 @@ export function renderThresholds(): void {
         return Object.assign(document.createElement('span'), { className: cls, textContent: text });
       };
 
-      const zIn  = make({ type: 'number', className: 'th-zoom', value: z, min: '0', max: '22', step: '1', title: 'Zoom level' });
-      const minIn = make({ type: 'number', value: String(minor), min: '1', max: '5000', step: '1', title: 'Minor interval (m)' });
-      const majIn = make({ type: 'number', value: String(major), min: '1', max: '10000', step: '1', title: 'Major interval (m)' });
-      const del = Object.assign(document.createElement('button'), { className: 'stop-del', textContent: '×', title: 'Remove' });
+      const zIn = make({
+        type: 'number',
+        className: 'th-zoom',
+        value: z,
+        min: '0',
+        max: '22',
+        step: '1',
+        title: 'Zoom level',
+      });
+      const minIn = make({
+        type: 'number',
+        value: String(minor),
+        min: '1',
+        max: '5000',
+        step: '1',
+        title: 'Minor interval (m)',
+      });
+      const majIn = make({
+        type: 'number',
+        value: String(major),
+        min: '1',
+        max: '10000',
+        step: '1',
+        title: 'Major interval (m)',
+      });
+      const del = Object.assign(document.createElement('button'), {
+        className: 'stop-del',
+        textContent: '×',
+        title: 'Remove',
+      });
 
       del.addEventListener('click', () => {
         delete ctThresholds[Number(z)];
@@ -295,11 +379,29 @@ export function renderThresholds(): void {
         ctThresholds[newZ] = [Number(minIn.value), Number(majIn.value)];
       };
 
-      zIn.addEventListener('change',  () => { updateThreshold(); renderThresholds(); addContourLayers(); });
-      minIn.addEventListener('change', () => { updateThreshold(); addContourLayers(); });
-      majIn.addEventListener('change', () => { updateThreshold(); addContourLayers(); });
+      zIn.addEventListener('change', () => {
+        updateThreshold();
+        renderThresholds();
+        addContourLayers();
+      });
+      minIn.addEventListener('change', () => {
+        updateThreshold();
+        addContourLayers();
+      });
+      majIn.addEventListener('change', () => {
+        updateThreshold();
+        addContourLayers();
+      });
 
-      row.append(makeSpan('th-lbl', 'Z'), zIn, makeSpan('th-lbl', 'minor'), minIn, makeSpan('th-lbl', 'major'), majIn, del);
+      row.append(
+        makeSpan('th-lbl', 'Z'),
+        zIn,
+        makeSpan('th-lbl', 'minor'),
+        minIn,
+        makeSpan('th-lbl', 'major'),
+        majIn,
+        del,
+      );
       list.appendChild(row);
     });
 }
@@ -313,27 +415,27 @@ export function applyCtPreset(name: string): void {
   ctThresholds = { ...p.thresholds };
 
   const { config: c } = p;
-  (el<HTMLInputElement>('ct-minor-color')).value         = c.minorColor;
-  (el<HTMLInputElement>('ct-minor-width')).value         = String(c.minorWidth);
-  (el<HTMLSpanElement>('ct-minor-width-v')).textContent  = c.minorWidth + 'px';
-  (el<HTMLInputElement>('ct-major-color')).value         = c.majorColor;
-  (el<HTMLInputElement>('ct-major-width')).value         = String(c.majorWidth);
-  (el<HTMLSpanElement>('ct-major-width-v')).textContent  = c.majorWidth + 'px';
-  (el<HTMLInputElement>('ct-opacity')).value             = String(c.opacity * 100);
-  (el<HTMLSpanElement>('ct-opacity-v')).textContent      = (c.opacity * 100) + '%';
-  (el<HTMLInputElement>('ct-label-color')).value         = c.labelColor;
-  (el<HTMLInputElement>('ct-text-size')).value           = String(c.textSize);
-  (el<HTMLSpanElement>('ct-text-size-v')).textContent    = c.textSize + 'px';
-  (el<HTMLInputElement>('ct-label-opacity')).value       = String(c.labelOpacity * 100);
-  (el<HTMLSpanElement>('ct-label-opacity-v')).textContent = (c.labelOpacity * 100) + '%';
-  (el<HTMLSelectElement>('sel-ct-font')).value           = c.font;
-  (el<HTMLSelectElement>('sel-ct-placement')).value      = c.placement;
-  (el<HTMLInputElement>('ct-halo-color')).value          = c.haloColor;
-  (el<HTMLInputElement>('ct-halo-width')).value          = String(c.haloWidth);
-  (el<HTMLSpanElement>('ct-halo-width-v')).textContent   = c.haloWidth + 'px';
-  (el<HTMLInputElement>('ct-halo-blur')).value           = String(c.haloBlur);
-  (el<HTMLSpanElement>('ct-halo-blur-v')).textContent    = c.haloBlur + 'px';
-  (el<HTMLInputElement>('tog-ct-labels')).checked        = c.showLabels;
+  el<HTMLInputElement>('ct-minor-color').value = c.minorColor;
+  el<HTMLInputElement>('ct-minor-width').value = String(c.minorWidth);
+  el<HTMLSpanElement>('ct-minor-width-v').textContent = c.minorWidth + 'px';
+  el<HTMLInputElement>('ct-major-color').value = c.majorColor;
+  el<HTMLInputElement>('ct-major-width').value = String(c.majorWidth);
+  el<HTMLSpanElement>('ct-major-width-v').textContent = c.majorWidth + 'px';
+  el<HTMLInputElement>('ct-opacity').value = String(c.opacity * 100);
+  el<HTMLSpanElement>('ct-opacity-v').textContent = c.opacity * 100 + '%';
+  el<HTMLInputElement>('ct-label-color').value = c.labelColor;
+  el<HTMLInputElement>('ct-text-size').value = String(c.textSize);
+  el<HTMLSpanElement>('ct-text-size-v').textContent = c.textSize + 'px';
+  el<HTMLInputElement>('ct-label-opacity').value = String(c.labelOpacity * 100);
+  el<HTMLSpanElement>('ct-label-opacity-v').textContent = c.labelOpacity * 100 + '%';
+  el<HTMLSelectElement>('sel-ct-font').value = c.font;
+  el<HTMLSelectElement>('sel-ct-placement').value = c.placement;
+  el<HTMLInputElement>('ct-halo-color').value = c.haloColor;
+  el<HTMLInputElement>('ct-halo-width').value = String(c.haloWidth);
+  el<HTMLSpanElement>('ct-halo-width-v').textContent = c.haloWidth + 'px';
+  el<HTMLInputElement>('ct-halo-blur').value = String(c.haloBlur);
+  el<HTMLSpanElement>('ct-halo-blur-v').textContent = c.haloBlur + 'px';
+  el<HTMLInputElement>('tog-ct-labels').checked = c.showLabels;
 
   renderThresholds();
   document.querySelectorAll('.ct-pre-btn').forEach(b => b.classList.remove('active'));
@@ -355,15 +457,18 @@ export function initContourControls(map: MaplibreMap): void {
     });
   });
 
-  ([ ['ct-layer-opacity', 'ct-layer-opacity-v', (v: string) => v + '%'],
-     ['ct-minor-width',   'ct-minor-width-v',   (v: string) => v + 'px'],
-     ['ct-major-width',   'ct-major-width-v',   (v: string) => v + 'px'],
-     ['ct-opacity',       'ct-opacity-v',       (v: string) => v + '%'],
-     ['ct-text-size',     'ct-text-size-v',     (v: string) => v + 'px'],
-     ['ct-label-opacity', 'ct-label-opacity-v', (v: string) => v + '%'],
-     ['ct-halo-width',    'ct-halo-width-v',    (v: string) => v + 'px'],
-     ['ct-halo-blur',     'ct-halo-blur-v',     (v: string) => v + 'px'],
-  ] as [string, string, (v: string) => string][]).forEach(([id, valId, fmt]) => {
+  (
+    [
+      ['ct-layer-opacity', 'ct-layer-opacity-v', (v: string) => v + '%'],
+      ['ct-minor-width', 'ct-minor-width-v', (v: string) => v + 'px'],
+      ['ct-major-width', 'ct-major-width-v', (v: string) => v + 'px'],
+      ['ct-opacity', 'ct-opacity-v', (v: string) => v + '%'],
+      ['ct-text-size', 'ct-text-size-v', (v: string) => v + 'px'],
+      ['ct-label-opacity', 'ct-label-opacity-v', (v: string) => v + '%'],
+      ['ct-halo-width', 'ct-halo-width-v', (v: string) => v + 'px'],
+      ['ct-halo-blur', 'ct-halo-blur-v', (v: string) => v + 'px'],
+    ] as [string, string, (v: string) => string][]
+  ).forEach(([id, valId, fmt]) => {
     el<HTMLInputElement>(id).addEventListener('input', e => {
       el<HTMLSpanElement>(valId).textContent = fmt((e.target as HTMLInputElement).value);
       updateContourPaint();
@@ -375,15 +480,19 @@ export function initContourControls(map: MaplibreMap): void {
   });
 
   el<HTMLButtonElement>('add-threshold').addEventListener('click', () => {
-    const zooms = Object.keys(ctThresholds).map(Number).sort((a, b) => a - b);
-    const next = zooms.length > 0 ? (zooms[zooms.length - 1]! + 1) : 10;
+    const zooms = Object.keys(ctThresholds)
+      .map(Number)
+      .sort((a, b) => a - b);
+    const next = zooms.length > 0 ? zooms[zooms.length - 1]! + 1 : 10;
     ctThresholds[next] = [10, 50];
     renderThresholds();
     addContourLayers();
   });
 
-  el<HTMLButtonElement>('ct-pre-standard').addEventListener('click', () => applyCtPreset('standard'));
-  el<HTMLButtonElement>('ct-pre-topo50').addEventListener('click',   () => applyCtPreset('topo50'));
-  el<HTMLButtonElement>('ct-pre-white').addEventListener('click',    () => applyCtPreset('white'));
-  el<HTMLButtonElement>('ct-pre-cyan').addEventListener('click',     () => applyCtPreset('cyan'));
+  el<HTMLButtonElement>('ct-pre-standard').addEventListener('click', () =>
+    applyCtPreset('standard'),
+  );
+  el<HTMLButtonElement>('ct-pre-topo50').addEventListener('click', () => applyCtPreset('topo50'));
+  el<HTMLButtonElement>('ct-pre-white').addEventListener('click', () => applyCtPreset('white'));
+  el<HTMLButtonElement>('ct-pre-cyan').addEventListener('click', () => applyCtPreset('cyan'));
 }

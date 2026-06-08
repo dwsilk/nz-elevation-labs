@@ -13,10 +13,14 @@ function setSwatch(btnId: string, bg: string): void {
 function waitFrames(n: number): Promise<void> {
   return n <= 0
     ? Promise.resolve()
-    // requestAnimationFrame expects a void return — the inner waitFrames
-    // chain feeds `resolve` but must be `void`-discarded explicitly so the
-    // rAF callback doesn't accidentally swallow a Promise.
-    : new Promise(resolve => requestAnimationFrame(() => { void waitFrames(n - 1).then(resolve); }));
+    : // requestAnimationFrame expects a void return — the inner waitFrames
+      // chain feeds `resolve` but must be `void`-discarded explicitly so the
+      // rAF callback doesn't accidentally swallow a Promise.
+      new Promise(resolve =>
+        requestAnimationFrame(() => {
+          void waitFrames(n - 1).then(resolve);
+        }),
+      );
 }
 
 export async function initTerrainPreviews(): Promise<void> {
@@ -31,16 +35,20 @@ export async function initTerrainPreviews(): Promise<void> {
       sources: {
         dem: { type: 'raster-dem', tiles: [ELEV_URL], tileSize: 256, encoding: 'mapbox' },
       },
-      layers: [{
-        id: 'hs', type: 'hillshade', source: 'dem',
-        paint: {
-          'hillshade-method': 'standard',
-          'hillshade-illumination-direction': 315,
-          'hillshade-exaggeration': 0.5,
-          'hillshade-shadow-color': 'rgba(0,0,0,0.5)',
-          'hillshade-highlight-color': 'rgba(255,255,255,0.15)',
+      layers: [
+        {
+          id: 'hs',
+          type: 'hillshade',
+          source: 'dem',
+          paint: {
+            'hillshade-method': 'standard',
+            'hillshade-illumination-direction': 315,
+            'hillshade-exaggeration': 0.5,
+            'hillshade-shadow-color': 'rgba(0,0,0,0.5)',
+            'hillshade-highlight-color': 'rgba(255,255,255,0.15)',
+          },
         },
-      }],
+      ],
     },
     center: CENTER,
     zoom: ZOOM,
@@ -53,9 +61,12 @@ export async function initTerrainPreviews(): Promise<void> {
   });
 
   try {
-    await new Promise<void>((resolve) => {
+    await new Promise<void>(resolve => {
       const timeout = setTimeout(resolve, 10_000);
-      void m.once('idle', () => { clearTimeout(timeout); resolve(); });
+      void m.once('idle', () => {
+        clearTimeout(timeout);
+        resolve();
+      });
     });
 
     for (const method of METHODS) {

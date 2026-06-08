@@ -5,20 +5,23 @@ import { decodeTerrainRgb, lngLatToTilePixel, MAX_DEM_ZOOM, DEM_TILE_SIZE } from
 //   h = -10000 + (R*65536 + G*256 + B) * 0.1
 // Helper: produce an RGBA buffer where every pixel encodes the same height.
 function rgbaForHeight(h: number, pixelCount: number): Uint8ClampedArray {
-  const raw = Math.round((h + 10000) / 0.1);  // (R<<16)|(G<<8)|B
+  const raw = Math.round((h + 10000) / 0.1); // (R<<16)|(G<<8)|B
   const r = (raw >> 16) & 0xff;
   const g = (raw >> 8) & 0xff;
   const b = raw & 0xff;
   const buf = new Uint8ClampedArray(pixelCount * 4);
   for (let i = 0; i < pixelCount; i++) {
-    buf[i * 4] = r; buf[i * 4 + 1] = g; buf[i * 4 + 2] = b; buf[i * 4 + 3] = 255;
+    buf[i * 4] = r;
+    buf[i * 4 + 1] = g;
+    buf[i * 4 + 2] = b;
+    buf[i * 4 + 3] = 255;
   }
   return buf;
 }
 
 describe('decodeTerrainRgb', () => {
   it('decodes all-zero RGB as the encoding floor (-10000 m)', () => {
-    const rgba = new Uint8ClampedArray(4 * 4);  // 4 pixels, all (0,0,0,0)
+    const rgba = new Uint8ClampedArray(4 * 4); // 4 pixels, all (0,0,0,0)
     const h = decodeTerrainRgb(rgba);
     expect(h.length).toBe(4);
     for (const v of h) expect(v).toBe(-10000);
@@ -27,7 +30,7 @@ describe('decodeTerrainRgb', () => {
   it('round-trips a representative elevation (Aoraki ≈ 3724 m) within encoding precision', () => {
     const rgba = rgbaForHeight(3724, 1);
     const h = decodeTerrainRgb(rgba);
-    expect(h[0]).toBeCloseTo(3724, 1);  // encoding resolution is 0.1 m
+    expect(h[0]).toBeCloseTo(3724, 1); // encoding resolution is 0.1 m
   });
 
   it('decodes sea level (0 m) exactly', () => {
@@ -73,7 +76,11 @@ describe('lngLatToTilePixel', () => {
     // Sample a handful of NZ-ish coordinates and confirm the pixel offsets
     // never escape the tile.
     const samples: Array<[number, number]> = [
-      [166.5, -46.5], [172.6, -43.5], [174.78, -41.29], [175.3, -39.5], [178.0, -37.6],
+      [166.5, -46.5],
+      [172.6, -43.5],
+      [174.78, -41.29],
+      [175.3, -39.5],
+      [178.0, -37.6],
     ];
     for (const [lng, lat] of samples) {
       const t = lngLatToTilePixel(lng, lat, 14);

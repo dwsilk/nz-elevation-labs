@@ -32,7 +32,10 @@ function tileUrl(src: DemDsm, z: number, x: number, y: number): string {
 }
 
 export function getDemHeights(
-  src: DemDsm, z: number, x: number, y: number,
+  src: DemDsm,
+  z: number,
+  x: number,
+  y: number,
   abort?: AbortController,
 ): Promise<Float32Array | null> {
   const key = `${src}/${z}/${x}/${y}`;
@@ -47,7 +50,9 @@ export function getDemHeights(
       _resolved.delete(oldest);
     }
   }
-  p.then(h => { if (h) _resolved.set(key, h); }).catch(() => _cache.delete(key));
+  p.then(h => {
+    if (h) _resolved.set(key, h);
+  }).catch(() => _cache.delete(key));
   return p;
 }
 
@@ -70,7 +75,10 @@ export function decodeTerrainRgb(rgba: Uint8ClampedArray | Uint8Array): Float32A
 }
 
 async function decodeHeights(
-  src: DemDsm, z: number, x: number, y: number,
+  src: DemDsm,
+  z: number,
+  x: number,
+  y: number,
   abort?: AbortController,
 ): Promise<Float32Array | null> {
   const url = tileUrl(src, z, x, y);
@@ -91,14 +99,20 @@ async function decodeHeights(
 // LINZ's LiDAR-derived terrain-RGB stops at z=14; clamp queries above that.
 export const MAX_DEM_ZOOM = 14;
 
-export interface TilePixel { z: number; x: number; y: number; px: number; py: number }
+export interface TilePixel {
+  z: number;
+  x: number;
+  y: number;
+  px: number;
+  py: number;
+}
 
 export function lngLatToTilePixel(lng: number, lat: number, zoom: number): TilePixel {
   const z = Math.max(0, Math.min(MAX_DEM_ZOOM, Math.round(zoom)));
   const n = Math.pow(2, z);
-  const latRad = lat * Math.PI / 180;
+  const latRad = (lat * Math.PI) / 180;
   const xFloat = ((lng + 180) / 360) * n;
-  const yFloat = (1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n;
+  const yFloat = ((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2) * n;
   const x = Math.floor(xFloat);
   const y = Math.floor(yFloat);
   const px = Math.max(0, Math.min(DEM_TILE_SIZE - 1, Math.floor((xFloat - x) * DEM_TILE_SIZE)));
@@ -124,7 +138,12 @@ export function demHeightAt(src: DemDsm, lng: number, lat: number, mapZoom: numb
  * Async variant — awaits the fetch. Use for one-shot queries (e.g. profile
  * sampling) where blocking is fine.
  */
-export async function demHeightAtAsync(src: DemDsm, lng: number, lat: number, mapZoom: number): Promise<number | null> {
+export async function demHeightAtAsync(
+  src: DemDsm,
+  lng: number,
+  lat: number,
+  mapZoom: number,
+): Promise<number | null> {
   const t = lngLatToTilePixel(lng, lat, mapZoom);
   const h = await getDemHeights(src, t.z, t.x, t.y);
   if (!h) return null;

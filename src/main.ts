@@ -6,31 +6,77 @@
 import type { RasterTileSource, IControl } from 'maplibre-gl';
 import { Map as MaplibreMap, NavigationControl, ScaleControl } from 'maplibre-gl';
 import {
-  API, ELEV_URL, DSM_URL, HS_URLS, AERIAL_URL,
-  MAP_CENTER, MAP_ZOOM,
-  DIFF_LAYER, DIFF_SOURCE, DIFF_URL,
-  ANALYSIS_LAYER, ANALYSIS_SOURCE, ANALYSIS_URLS,
-  type DemDsm, type HsSource, type HsRaster, type HsMethod, type HsAnalysis,
+  API,
+  ELEV_URL,
+  DSM_URL,
+  HS_URLS,
+  AERIAL_URL,
+  MAP_CENTER,
+  MAP_ZOOM,
+  DIFF_LAYER,
+  DIFF_SOURCE,
+  DIFF_URL,
+  ANALYSIS_LAYER,
+  ANALYSIS_SOURCE,
+  ANALYSIS_URLS,
+  type DemDsm,
+  type HsSource,
+  type HsRaster,
+  type HsMethod,
+  type HsAnalysis,
 } from './modules/config.js';
 import {
-  PRESETS, stops, activePreset, setStops, setActivePreset,
-  paintCanvas, colorAt, buildColorExpr, rgbToHex,
+  PRESETS,
+  stops,
+  activePreset,
+  setStops,
+  setActivePreset,
+  paintCanvas,
+  colorAt,
+  buildColorExpr,
+  rgbToHex,
   type ColourStop,
 } from './modules/elevation.js';
 import {
-  initContourControls, addContourLayers, removeContourLayers, renderThresholds,
-  applyCtPreset, activeCtPreset, setActiveSrc as setContourSrc,
+  initContourControls,
+  addContourLayers,
+  removeContourLayers,
+  renderThresholds,
+  applyCtPreset,
+  activeCtPreset,
+  setActiveSrc as setContourSrc,
 } from './modules/contour.js';
 import {
-  loadCoverage, prefetchCoverage, initCoverageControls, showCoverageLayers, hideCoverageLayers, switchCoverageSrc,
+  loadCoverage,
+  prefetchCoverage,
+  initCoverageControls,
+  showCoverageLayers,
+  hideCoverageLayers,
+  switchCoverageSrc,
 } from './modules/coverage.js';
 import {
-  loadExport, initExportControls, showExportLayers, hideExportLayers, switchExportSrc,
+  loadExport,
+  initExportControls,
+  showExportLayers,
+  hideExportLayers,
+  switchExportSrc,
 } from './modules/export.js';
 import { registerDiffProtocol, buildDiffColorExpr } from './modules/diff.js';
 import { registerAnalysisProtocol } from './modules/analysis.js';
-import { initInspectControls, attachInspect, detachInspect, setInspectActiveSrc } from './modules/inspect.js';
-import { initBasemap, isBasemapOrLabelLayer, moveLabelsToTop, setBasemap, setLabelsEnabled, setHillshadeBlend } from './modules/basemap.js';
+import {
+  initInspectControls,
+  attachInspect,
+  detachInspect,
+  setInspectActiveSrc,
+} from './modules/inspect.js';
+import {
+  initBasemap,
+  isBasemapOrLabelLayer,
+  moveLabelsToTop,
+  setBasemap,
+  setLabelsEnabled,
+  setHillshadeBlend,
+} from './modules/basemap.js';
 import { initTerrainPreviews } from './modules/hs-thumbs.js';
 import { readHash, setHashParam } from './modules/hash.js';
 
@@ -82,7 +128,7 @@ function rampIndexFromSlug(slug: string): number {
 // `terrain:igor` <-> `dynamic.igor`, `raster:igor` <-> `raster.igor`,
 // `analysis:slope` <-> `analysis.slope`.
 function hsToken(src: HsSource): string {
-  if (src.startsWith('terrain:'))  return `dynamic.${src.slice(8)}`;
+  if (src.startsWith('terrain:')) return `dynamic.${src.slice(8)}`;
   if (src.startsWith('analysis:')) return `analysis.${src.slice(9)}`;
   return `raster.${src.slice(7)}`;
 }
@@ -90,18 +136,26 @@ function hsToken(src: HsSource): string {
 function tokenToHs(token: string): HsSource | null {
   const dot = token.indexOf('.');
   if (dot < 0) return null;
-  const kind = token.slice(0, dot), method = token.slice(dot + 1);
+  const kind = token.slice(0, dot),
+    method = token.slice(dot + 1);
   const src =
-      kind === 'dynamic'  ? `terrain:${method}`
-    : kind === 'raster'   ? `raster:${method}`
-    : kind === 'analysis' ? `analysis:${method}`
-    : null;
+    kind === 'dynamic'
+      ? `terrain:${method}`
+      : kind === 'raster'
+        ? `raster:${method}`
+        : kind === 'analysis'
+          ? `analysis:${method}`
+          : null;
   return src && (HS_SOURCES as string[]).includes(src) ? (src as HsSource) : null;
 }
 
 // Contour's internal `topo50` key surfaces in the URL as the visible label.
-function ctToken(name: string): string { return name === 'topo50' ? 'topographic' : name; }
-function ctFromToken(token: string): string { return token === 'topographic' ? 'topo50' : token; }
+function ctToken(name: string): string {
+  return name === 'topo50' ? 'topographic' : name;
+}
+function ctFromToken(token: string): string {
+  return token === 'topographic' ? 'topo50' : token;
+}
 
 function currentPreset(): string | null {
   if (activeTab === 'elevation') return rampSlug(activePreset);
@@ -165,11 +219,15 @@ const map = new MaplibreMap({
     layers: [
       { id: 'bg', type: 'background', paint: { 'background-color': '#ffffff' } },
       {
-        id: 'color-relief', type: 'color-relief', source: 'dem-relief',
+        id: 'color-relief',
+        type: 'color-relief',
+        source: 'dem-relief',
         paint: { 'color-relief-color': buildColorExpr(stops), 'color-relief-opacity': 1.0 },
       },
       {
-        id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
+        id: 'hillshade',
+        type: 'hillshade',
+        source: 'dem-hillshade',
         paint: {
           'hillshade-method': 'igor',
           'hillshade-illumination-direction': 315,
@@ -179,14 +237,18 @@ const map = new MaplibreMap({
         },
       },
       {
-        id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+        id: 'hillshade-raster-layer',
+        type: 'raster',
+        source: 'hillshade-raster',
         // visibility:'none' (not just opacity 0) so MapLibre doesn't fetch
         // hillshade-raster tiles before teardownBase runs on first mode entry.
         layout: { visibility: 'none' },
         paint: { 'raster-opacity': 0.0 },
       },
       {
-        id: 'aerial-layer', type: 'raster', source: 'aerial',
+        id: 'aerial-layer',
+        type: 'raster',
+        source: 'aerial',
         layout: { visibility: 'none' },
       },
     ],
@@ -219,7 +281,9 @@ class Btn3DControl implements IControl {
     this._container.appendChild(btn);
     return this._container;
   }
-  onRemove(): void { this._container.parentNode?.removeChild(this._container); }
+  onRemove(): void {
+    this._container.parentNode?.removeChild(this._container);
+  }
 }
 
 map.addControl(new ScaleControl({ unit: 'metric' }), 'bottom-right');
@@ -261,7 +325,10 @@ function applyElevationPreset(i: number): void {
   if (!p) return;
   setActivePreset(i);
   setStops(p.stops.map(s => ({ ...s })));
-  renderPresets(); renderStops(); applyRamp(); renderRampMarkers();
+  renderPresets();
+  renderStops();
+  applyRamp();
+  renderRampMarkers();
   syncPresetHash();
 }
 
@@ -273,9 +340,14 @@ function renderPresets(): void {
     btn.className = 'pre-btn' + (i === activePreset ? ' active' : '');
     btn.title = p.name;
     const sw = document.createElement('canvas');
-    sw.className = 'pre-sw'; sw.width = 120; sw.height = 26;
+    sw.className = 'pre-sw';
+    sw.width = 120;
+    sw.height = 26;
     paintCanvas(sw, p.stops);
-    const lbl = Object.assign(document.createElement('span'), { className: 'pre-lbl', textContent: p.name });
+    const lbl = Object.assign(document.createElement('span'), {
+      className: 'pre-lbl',
+      textContent: p.name,
+    });
     btn.append(sw, lbl);
     btn.addEventListener('click', () => applyElevationPreset(i));
     container.appendChild(btn);
@@ -285,41 +357,59 @@ function renderPresets(): void {
 function renderStops(): void {
   const list = el('stop-list');
   list.innerHTML = '';
-  [...stops].sort((a, b) => a.e - b.e).forEach((s, i) => {
-    const row = document.createElement('div');
-    row.className = 'stop-row';
+  [...stops]
+    .sort((a, b) => a.e - b.e)
+    .forEach((s, i) => {
+      const row = document.createElement('div');
+      row.className = 'stop-row';
 
-    const ci = document.createElement('input');
-    ci.type = 'color'; ci.value = s.c;
-    ci.setAttribute('aria-label', `Stop ${i + 1} colour`);
-    ci.addEventListener('input', () => {
-      stops[stops.findIndex(x => x.e === s.e)]!.c = ci.value;
-      applyRamp(); renderRampMarkers();
+      const ci = document.createElement('input');
+      ci.type = 'color';
+      ci.value = s.c;
+      ci.setAttribute('aria-label', `Stop ${i + 1} colour`);
+      ci.addEventListener('input', () => {
+        stops[stops.findIndex(x => x.e === s.e)]!.c = ci.value;
+        applyRamp();
+        renderRampMarkers();
+      });
+
+      const ei = document.createElement('input');
+      ei.type = 'number';
+      ei.value = String(s.e);
+      ei.min = '-500';
+      ei.max = '5000';
+      ei.step = '10';
+      ei.setAttribute('aria-label', `Stop ${i + 1} elevation`);
+      ei.addEventListener('change', () => {
+        stops[stops.findIndex(x => x.e === s.e)]!.e = Number(ei.value);
+        applyRamp();
+        renderRampMarkers();
+      });
+
+      const unit = Object.assign(document.createElement('span'), {
+        className: 'stop-unit',
+        textContent: 'm',
+      });
+
+      const del = document.createElement('button');
+      del.className = 'stop-del';
+      del.textContent = '×';
+      del.disabled = stops.length <= 2;
+      del.addEventListener('click', () => {
+        if (stops.length > 2) {
+          stops.splice(
+            stops.findIndex(x => x.e === s.e),
+            1,
+          );
+          renderStops();
+          applyRamp();
+          renderRampMarkers();
+        }
+      });
+
+      row.append(ci, ei, unit, del);
+      list.appendChild(row);
     });
-
-    const ei = document.createElement('input');
-    ei.type = 'number'; ei.value = String(s.e); ei.min = '-500'; ei.max = '5000'; ei.step = '10';
-    ei.setAttribute('aria-label', `Stop ${i + 1} elevation`);
-    ei.addEventListener('change', () => {
-      stops[stops.findIndex(x => x.e === s.e)]!.e = Number(ei.value);
-      applyRamp(); renderRampMarkers();
-    });
-
-    const unit = Object.assign(document.createElement('span'), { className: 'stop-unit', textContent: 'm' });
-
-    const del = document.createElement('button');
-    del.className = 'stop-del'; del.textContent = '×';
-    del.disabled = stops.length <= 2;
-    del.addEventListener('click', () => {
-      if (stops.length > 2) {
-        stops.splice(stops.findIndex(x => x.e === s.e), 1);
-        renderStops(); applyRamp(); renderRampMarkers();
-      }
-    });
-
-    row.append(ci, ei, unit, del);
-    list.appendChild(row);
-  });
 }
 
 el('ramp-bar').addEventListener('dblclick', e => {
@@ -331,14 +421,19 @@ el('ramp-bar').addEventListener('dblclick', e => {
   const newE = Math.round(minE + pct * (maxE - minE));
   if (stops.some(s => s.e === newE)) return;
   stops.push({ e: newE, c: rgbToHex(colorAt(newE, stops)) });
-  renderStops(); applyRamp(); renderRampMarkers();
+  renderStops();
+  applyRamp();
+  renderRampMarkers();
 });
 
 el<HTMLButtonElement>('add-stop').addEventListener('click', () => {
   const s = [...stops].sort((a, b) => a.e - b.e);
   const ne = Math.round((s[s.length - 1]!.e + s[s.length - 2]!.e) / 2);
   stops.push({ e: ne, c: rgbToHex(colorAt(ne, stops)) });
-  renderStops(); drawRamp(stops); applyRamp(); renderRampMarkers();
+  renderStops();
+  drawRamp(stops);
+  applyRamp();
+  renderRampMarkers();
 });
 
 // ── RAMP HANDLES ─────────────────────────────────────────────────────────────
@@ -355,7 +450,7 @@ function renderRampMarkers(): void {
     const isFixed = idx === 0 || idx === sorted.length - 1;
     const handle = document.createElement('div');
     handle.className = 'ramp-handle' + (isFixed ? ' is-fixed' : '');
-    handle.style.left = `${(s.e - minE) / range * 100}%`;
+    handle.style.left = `${((s.e - minE) / range) * 100}%`;
     handle.style.background = s.c;
     handle.title = `${s.e} m`;
 
@@ -381,7 +476,7 @@ function renderRampMarkers(): void {
         const rowInputs = el('stop-list').querySelectorAll<HTMLInputElement>('input[type=number]');
         if (rowInputs[curIdx]) rowInputs[curIdx].value = String(newE);
         const ns = [...stops].sort((a, b) => a.e - b.e);
-        handle.style.left = `${(newE - ns[0]!.e) / (ns[ns.length - 1]!.e - ns[0]!.e || 1) * 100}%`;
+        handle.style.left = `${((newE - ns[0]!.e) / (ns[ns.length - 1]!.e - ns[0]!.e || 1)) * 100}%`;
         handle.title = `${newE} m`;
         applyRamp();
       });
@@ -417,7 +512,7 @@ function updateHsTerrainVis(type: string): void {
 
 function syncHsSlider(type: string): void {
   const slHs = el<HTMLInputElement>('sl-hs');
-  const val  = type === 'terrain' ? terrainExag : 1.0;
+  const val = type === 'terrain' ? terrainExag : 1.0;
   slHs.value = String(Math.round(val * 10));
   el('sl-hs-v').textContent = val.toFixed(1);
 }
@@ -447,33 +542,48 @@ function applyHsPreset(src: HsSource): void {
     setVis('hillshade', false);
     setVis('hillshade-raster-layer', true);
     setVis(ANALYSIS_LAYER, false);
-    map.getSource<RasterTileSource>('hillshade-raster')!.setTiles([HS_URLS[method as HsRaster][activeSrc]]);
+    map
+      .getSource<RasterTileSource>('hillshade-raster')!
+      .setTiles([HS_URLS[method as HsRaster][activeSrc]]);
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
-  } else { // analysis
+  } else {
+    // analysis
     setVis('hillshade', false);
     setVis('hillshade-raster-layer', false);
     setVis(ANALYSIS_LAYER, true);
-    map.getSource<RasterTileSource>(ANALYSIS_SOURCE)!
+    map
+      .getSource<RasterTileSource>(ANALYSIS_SOURCE)!
       .setTiles([ANALYSIS_URLS[method as HsAnalysis][activeSrc]]);
     map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', 1.0);
   }
   syncPresetHash();
 }
 
-const HS_SOURCES: HsSource[] = ['terrain:standard', 'terrain:basic', 'terrain:igor', 'terrain:combined',
-  'terrain:multidirectional', 'raster:standard', 'raster:igor', 'analysis:slope', 'analysis:aspect'];
+const HS_SOURCES: HsSource[] = [
+  'terrain:standard',
+  'terrain:basic',
+  'terrain:igor',
+  'terrain:combined',
+  'terrain:multidirectional',
+  'raster:standard',
+  'raster:igor',
+  'analysis:slope',
+  'analysis:aspect',
+];
 
 HS_SOURCES.forEach(src => {
   const [type, method] = src.split(':') as [string, string];
-  document.getElementById(`hs-pre-${type}-${method}`)
+  document
+    .getElementById(`hs-pre-${type}-${method}`)
     ?.addEventListener('click', () => applyHsPreset(src));
 });
 
 // Mirror contour preset selection into the hash (the contour module owns the
 // actual apply via its own button listeners).
 (['standard', 'topo50', 'white', 'cyan'] as const).forEach(name => {
-  document.getElementById(`ct-pre-${name}`)
-    ?.addEventListener('click', () => { if (activeTab === 'contour') setHashParam('preset', ctToken(name)); });
+  document.getElementById(`ct-pre-${name}`)?.addEventListener('click', () => {
+    if (activeTab === 'contour') setHashParam('preset', ctToken(name));
+  });
 });
 
 el<HTMLInputElement>('sl-hs-dir').addEventListener('input', e => {
@@ -571,8 +681,8 @@ let is3D = false;
 let set3D: (on: boolean, animateCamera?: boolean) => void = () => {};
 
 function init3DButton(map: MaplibreMap): void {
-  const btn3d    = el<HTMLButtonElement>('btn-3d');
-  const exagSl   = el<HTMLInputElement>('sl-exag');
+  const btn3d = el<HTMLButtonElement>('btn-3d');
+  const exagSl = el<HTMLInputElement>('sl-exag');
   const exagWrap = el('exag-wrap');
 
   set3D = (on: boolean, animateCamera = true): void => {
@@ -660,8 +770,22 @@ let activeTab: TabName = 'elevation';
 // source (3D terrain) and the contour/coverage overlay layers are left untouched.
 
 const ATTR = '© Land Information New Zealand CC BY 4.0';
-const BASE_LAYER_IDS = ['color-relief', 'hillshade', 'hillshade-raster-layer', 'aerial-layer', DIFF_LAYER, ANALYSIS_LAYER];
-const BASE_SOURCE_IDS = ['dem-hillshade', 'dem-relief', 'hillshade-raster', 'aerial', DIFF_SOURCE, ANALYSIS_SOURCE];
+const BASE_LAYER_IDS = [
+  'color-relief',
+  'hillshade',
+  'hillshade-raster-layer',
+  'aerial-layer',
+  DIFF_LAYER,
+  ANALYSIS_LAYER,
+];
+const BASE_SOURCE_IDS = [
+  'dem-hillshade',
+  'dem-relief',
+  'hillshade-raster',
+  'aerial',
+  DIFF_SOURCE,
+  ANALYSIS_SOURCE,
+];
 
 function teardownBase(): void {
   for (const id of BASE_LAYER_IDS) if (map.getLayer(id)) map.removeLayer(id);
@@ -687,7 +811,13 @@ function addBaseLayer(layer: Parameters<typeof map.addLayer>[0]): void {
 type SourceSpec = Parameters<typeof map.addSource>[1];
 
 function demSpec(): SourceSpec {
-  return { type: 'raster-dem', tiles: [activeSrc === 'dsm' ? DSM_URL : ELEV_URL], tileSize: 256, encoding: 'mapbox', attribution: ATTR };
+  return {
+    type: 'raster-dem',
+    tiles: [activeSrc === 'dsm' ? DSM_URL : ELEV_URL],
+    tileSize: 256,
+    encoding: 'mapbox',
+    attribution: ATTR,
+  };
 }
 function rasterSpec(url: string): SourceSpec {
   return { type: 'raster', tiles: [url], tileSize: 256, attribution: ATTR };
@@ -697,10 +827,20 @@ function hillshadePaint(method: HsMethod, exaggeration: number): Record<string, 
   return {
     'hillshade-method': method,
     'hillshade-illumination-direction': Number(el<HTMLInputElement>('sl-hs-dir').value),
-    'hillshade-illumination-anchor': el<HTMLButtonElement>('btn-hs-viewport').classList.contains('active') ? 'viewport' : 'map',
+    'hillshade-illumination-anchor': el<HTMLButtonElement>('btn-hs-viewport').classList.contains(
+      'active',
+    )
+      ? 'viewport'
+      : 'map',
     'hillshade-exaggeration': exaggeration,
-    'hillshade-shadow-color': hexToRgba(el<HTMLInputElement>('hs-shadow-color').value, Number(el<HTMLInputElement>('sl-hs-shadow-op').value)),
-    'hillshade-highlight-color': hexToRgba(el<HTMLInputElement>('hs-highlight-color').value, Number(el<HTMLInputElement>('sl-hs-highlight-op').value)),
+    'hillshade-shadow-color': hexToRgba(
+      el<HTMLInputElement>('hs-shadow-color').value,
+      Number(el<HTMLInputElement>('sl-hs-shadow-op').value),
+    ),
+    'hillshade-highlight-color': hexToRgba(
+      el<HTMLInputElement>('hs-highlight-color').value,
+      Number(el<HTMLInputElement>('sl-hs-highlight-op').value),
+    ),
     'hillshade-accent-color': el<HTMLInputElement>('hs-accent-color').value,
   };
 }
@@ -711,7 +851,9 @@ function buildElevationBase(): void {
   map.addSource('dem-relief', demSpec());
   const opPct = Number(el<HTMLInputElement>('sl-op').value);
   addBaseLayer({
-    id: 'color-relief', type: 'color-relief', source: 'dem-relief',
+    id: 'color-relief',
+    type: 'color-relief',
+    source: 'dem-relief',
     layout: { visibility: opPct > 0 ? 'visible' : 'none' },
     paint: { 'color-relief-color': buildColorExpr(stops), 'color-relief-opacity': opPct / 100 },
   });
@@ -726,17 +868,23 @@ function buildHillshadeBase(): void {
   // manager only marks a source "used" if a layer references it AND that
   // layer's visibility is not 'none' — opacity:0 alone doesn't stop fetches).
   addBaseLayer({
-    id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
+    id: 'hillshade',
+    type: 'hillshade',
+    source: 'dem-hillshade',
     layout: { visibility: 'none' },
     paint: hillshadePaint('igor', 0),
   });
   addBaseLayer({
-    id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
+    id: 'hillshade-raster-layer',
+    type: 'raster',
+    source: 'hillshade-raster',
     layout: { visibility: 'none' },
     paint: { 'raster-opacity': 0 },
   });
   addBaseLayer({
-    id: ANALYSIS_LAYER, type: 'raster', source: ANALYSIS_SOURCE,
+    id: ANALYSIS_LAYER,
+    type: 'raster',
+    source: ANALYSIS_SOURCE,
     layout: { visibility: 'none' },
     paint: { 'raster-opacity': 0 },
   });
@@ -775,16 +923,24 @@ function leaveExportMode(): void {
 function buildDiffBase(): void {
   map.addSource('dem-hillshade', demSpec());
   map.addSource(DIFF_SOURCE, {
-    type: 'raster-dem', tiles: [DIFF_URL], tileSize: 256, encoding: 'mapbox', attribution: ATTR,
+    type: 'raster-dem',
+    tiles: [DIFF_URL],
+    tileSize: 256,
+    encoding: 'mapbox',
+    attribution: ATTR,
   });
   const opPct = Number(el<HTMLInputElement>('sl-diff-op').value);
   addBaseLayer({
-    id: DIFF_LAYER, type: 'color-relief', source: DIFF_SOURCE,
+    id: DIFF_LAYER,
+    type: 'color-relief',
+    source: DIFF_SOURCE,
     layout: { visibility: opPct > 0 ? 'visible' : 'none' },
     paint: { 'color-relief-color': buildDiffColorExpr(), 'color-relief-opacity': opPct / 100 },
   } as Parameters<typeof map.addLayer>[0]);
   addBaseLayer({
-    id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
+    id: 'hillshade',
+    type: 'hillshade',
+    source: 'dem-hillshade',
     paint: hillshadePaint('igor', 0.5),
   });
 }
@@ -837,19 +993,21 @@ function enterHillshadeMode(): void {
   teardownBase();
   buildHillshadeBase();
   applyHsPreset(hsSource);
-  if (!hsPreviewed) { hsPreviewed = true; initTerrainPreviews().catch(console.warn); }
+  if (!hsPreviewed) {
+    hsPreviewed = true;
+    initTerrainPreviews().catch(console.warn);
+  }
 }
-
 
 // Sentence-case titles shown in the panel header — driven by the active rail disc.
 const TAB_TITLES: Record<TabName, string> = {
   elevation: 'Colour ramp',
   hillshade: 'Hillshade',
-  contour:   'Contours',
-  diff:      'Difference',
-  coverage:  'Coverage',
-  inspect:   'Inspect',
-  export:    'Export',
+  contour: 'Contours',
+  diff: 'Difference',
+  coverage: 'Coverage',
+  inspect: 'Inspect',
+  export: 'Export',
 };
 
 function switchTab(next: TabName): void {
@@ -882,9 +1040,13 @@ function switchTab(next: TabName): void {
     if (next === 'elevation') enterElevationMode();
     else if (next === 'hillshade') enterHillshadeMode();
     else if (next === 'contour') enterContourMode();
-    else if (next === 'coverage') { enterCoverageMode(); loadCoverage(map); }
-    else if (next === 'export') { enterExportMode(); loadExport(map, activeSrc); }
-    else if (next === 'diff') enterDiffMode();
+    else if (next === 'coverage') {
+      enterCoverageMode();
+      loadCoverage(map);
+    } else if (next === 'export') {
+      enterExportMode();
+      loadExport(map, activeSrc);
+    } else if (next === 'diff') enterDiffMode();
     else if (next === 'inspect') enterInspectMode();
     // The freshly-added mode-base / overlay layers go on top of bg; if the
     // Labels overlay is on, re-stack it so it stays the topmost group.
@@ -915,7 +1077,13 @@ function restoreFromHash(): void {
 
   // Basemap + Labels overlay (driven by the on-map basemap control).
   const bm = p['basemap'];
-  if (bm === 'none' || bm === 'aerial' || bm === 'hillshade-dem' || bm === 'hillshade-dsm' || bm === 'topolite') {
+  if (
+    bm === 'none' ||
+    bm === 'aerial' ||
+    bm === 'hillshade-dem' ||
+    bm === 'hillshade-dsm' ||
+    bm === 'topolite'
+  ) {
     setBasemap(bm);
   }
   if (p['overlay'] === 'labels') setLabelsEnabled(true);
@@ -923,13 +1091,25 @@ function restoreFromHash(): void {
   if (blend === 'dem' || blend === 'dsm') setHillshadeBlend(blend);
 
   const mode = p['mode'];
-  if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage' || mode === 'export' || mode === 'diff' || mode === 'inspect') switchTab(mode);
+  if (
+    mode === 'hillshade' ||
+    mode === 'contour' ||
+    mode === 'coverage' ||
+    mode === 'export' ||
+    mode === 'diff' ||
+    mode === 'inspect'
+  )
+    switchTab(mode);
 
   const preset = p['preset'];
   if (preset) {
-    if (activeTab === 'elevation') { const i = rampIndexFromSlug(preset); if (i >= 0) applyElevationPreset(i); }
-    else if (activeTab === 'hillshade') { const src = tokenToHs(preset); if (src) applyHsPreset(src); }
-    else if (activeTab === 'contour') applyCtPreset(ctFromToken(preset));
+    if (activeTab === 'elevation') {
+      const i = rampIndexFromSlug(preset);
+      if (i >= 0) applyElevationPreset(i);
+    } else if (activeTab === 'hillshade') {
+      const src = tokenToHs(preset);
+      if (src) applyHsPreset(src);
+    } else if (activeTab === 'contour') applyCtPreset(ctFromToken(preset));
   }
   // Reconcile the hash with the final applied state (applyCtPreset doesn't write it).
   syncPresetHash();
@@ -939,8 +1119,8 @@ function restoreFromHash(): void {
 
 // ── PANEL TOGGLE ─────────────────────────────────────────────────────────────
 
-const panelEl       = el('panel');
-const mapWrapEl     = el('map-wrap');
+const panelEl = el('panel');
+const mapWrapEl = el('map-wrap');
 const panelToggleEl = el<HTMLButtonElement>('panel-toggle');
 
 function setPanelCollapsed(collapsed: boolean): void {
@@ -950,7 +1130,9 @@ function setPanelCollapsed(collapsed: boolean): void {
   panelToggleEl.setAttribute('aria-expanded', String(!collapsed));
 }
 
-panelToggleEl.addEventListener('click', () => setPanelCollapsed(!panelEl.classList.contains('collapsed')));
+panelToggleEl.addEventListener('click', () =>
+  setPanelCollapsed(!panelEl.classList.contains('collapsed')),
+);
 // Mobile X close button — same effect as the desktop chevron's "close" state.
 el<HTMLButtonElement>('pnl-close').addEventListener('click', () => setPanelCollapsed(true));
 panelEl.addEventListener('transitionend', () => map.resize());

@@ -1,0 +1,12 @@
+# Revisions in this file are skipped by `git blame` (and by GitHub's blame view).
+# Add reformatting / mass-mechanical-rewrite commits here so the real author of a
+# line stays visible.
+#
+# Tell git to use this file once per clone:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Each entry: SHA on its own line, optionally preceded by a `# what & why` comment.
+
+# Initial Prettier reformat across the repo (printWidth 100, single-quote,
+# no-paren arrows). Replace this placeholder with the actual SHA after committing.
+# REPLACE_WITH_REFORMAT_COMMIT_SHA

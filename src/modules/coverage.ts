@@ -5,8 +5,13 @@
 import type { Map as MaplibreMap, ExpressionSpecification, GeoJSONSource } from 'maplibre-gl';
 import type { FeatureCollection, Feature, Geometry } from 'geojson';
 import {
-  COV_GEOJSONS, COV_SOURCE, COV_FILL, COV_HOVER,
-  COV_OUTLINE, COV_LABELS, COV_LAYERS,
+  COV_GEOJSONS,
+  COV_SOURCE,
+  COV_FILL,
+  COV_HOVER,
+  COV_OUTLINE,
+  COV_LABELS,
+  COV_LAYERS,
   type DemDsm,
 } from './config.js';
 
@@ -35,14 +40,18 @@ export interface NormalisedCaptureProperties extends RawCaptureProperties {
 
 // ── FETCH CACHE ───────────────────────────────────────────────────────────────
 
-const covRawCache: Partial<Record<DemDsm, Promise<FeatureCollection<Geometry, RawCaptureProperties>>>> = {};
+const covRawCache: Partial<
+  Record<DemDsm, Promise<FeatureCollection<Geometry, RawCaptureProperties>>>
+> = {};
 
 function fetchRaw(src: DemDsm): Promise<FeatureCollection<Geometry, RawCaptureProperties>> {
   // Local-variable narrowing instead of `covRawCache[src]!` so TS picks up
   // the "definitely assigned" state after the cache miss.
   const cached = covRawCache[src];
   if (cached) return cached;
-  const p = fetch(COV_GEOJSONS[src]).then(r => r.json() as Promise<FeatureCollection<Geometry, RawCaptureProperties>>);
+  const p = fetch(COV_GEOJSONS[src]).then(
+    r => r.json() as Promise<FeatureCollection<Geometry, RawCaptureProperties>>,
+  );
   covRawCache[src] = p;
   return p;
 }
@@ -55,12 +64,12 @@ export function prefetchCoverage(): void {
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
-let covLoaded     = false;
+let covLoaded = false;
 let covActiveSrc: DemDsm = 'dem';
-let covHoverId:    number | null = null;
+let covHoverId: number | null = null;
 let covSelectedId: number | null = null;
-let covMinDate:    Date | null = null;
-let covMaxDate:    Date | null = null;
+let covMinDate: Date | null = null;
+let covMaxDate: Date | null = null;
 let covAllFeatures: FeatureCollection<Geometry, NormalisedCaptureProperties> | null = null;
 let resetYrSlider: (() => void) | null = null;
 
@@ -81,9 +90,9 @@ function tryDate(s: string): Date | null {
 
 // ── AREA HELPERS ─────────────────────────────────────────────────────────────
 
-const EARTH_R_KM  = 6371;
+const EARTH_R_KM = 6371;
 const NZ_AREA_KM2 = 268_021;
-const DEG2RAD     = Math.PI / 180;
+const DEG2RAD = Math.PI / 180;
 
 export function ringAreaKm2(coords: number[][]): number {
   let sum = 0;
@@ -92,14 +101,15 @@ export function ringAreaKm2(coords: number[][]): number {
     const c1 = coords[(i + 1) % n]!;
     sum += (c1[0]! - c0[0]!) * DEG2RAD * (Math.sin(c0[1]! * DEG2RAD) + Math.sin(c1[1]! * DEG2RAD));
   }
-  return Math.abs(sum) * EARTH_R_KM * EARTH_R_KM / 2;
+  return (Math.abs(sum) * EARTH_R_KM * EARTH_R_KM) / 2;
 }
 
 export function featureAreaKm2(f: Feature<Geometry, NormalisedCaptureProperties>): number {
   const geo = f.geometry;
   if (geo.type === 'Polygon') {
     let a = ringAreaKm2(geo.coordinates[0] as number[][]);
-    for (let i = 1; i < geo.coordinates.length; i++) a -= ringAreaKm2(geo.coordinates[i] as number[][]);
+    for (let i = 1; i < geo.coordinates.length; i++)
+      a -= ringAreaKm2(geo.coordinates[i] as number[][]);
     return Math.max(0, a);
   }
   if (geo.type === 'MultiPolygon') {
@@ -115,20 +125,16 @@ export function featureAreaKm2(f: Feature<Geometry, NormalisedCaptureProperties>
 // ── AGE EXPRESSION ───────────────────────────────────────────────────────────
 
 export function buildAgeColorExpr(): ExpressionSpecification {
-  return ['interpolate', ['linear'], ['get', 'age_t'],
-    0, '#7fbf7b',
-    0.5, '#f7f7f7',
-    1, '#af8dc3',
-  ];
+  return ['interpolate', ['linear'], ['get', 'age_t'], 0, '#7fbf7b', 0.5, '#f7f7f7', 1, '#af8dc3'];
 }
 
 // ── YEAR RANGE ────────────────────────────────────────────────────────────────
 
 export function featureYears(f: Feature<Geometry, NormalisedCaptureProperties>): string[] {
   const from = f.properties.flown_from ?? '';
-  const to   = f.properties.flown_to   ?? from;
+  const to = f.properties.flown_to ?? from;
   const yrFrom = parseInt(from.slice(0, 4), 10);
-  const yrTo   = parseInt(to.slice(0, 4),   10);
+  const yrTo = parseInt(to.slice(0, 4), 10);
   if (!yrFrom) return [];
   const years: string[] = [];
   for (let y = yrFrom; y <= (yrTo || yrFrom); y++) years.push(String(y));
@@ -147,7 +153,11 @@ function buildYearRangeSlider(
   if (!section) return;
 
   const counts: Record<string, number> = {};
-  features.forEach(f => featureYears(f).forEach(yr => { counts[yr] = (counts[yr] ?? 0) + 1; }));
+  features.forEach(f =>
+    featureYears(f).forEach(yr => {
+      counts[yr] = (counts[yr] ?? 0) + 1;
+    }),
+  );
   const years = Object.keys(counts).sort().reverse();
   if (years.length === 0) return;
 
@@ -168,15 +178,15 @@ function buildYearRangeSlider(
       ? all.features
       : all.features.filter(f => {
           const from = parseInt(f.properties.flown_from?.slice(0, 4) ?? '0', 10);
-          const to   = parseInt(f.properties.flown_to?.slice(0, 4)   ?? '0', 10) || from;
+          const to = parseInt(f.properties.flown_to?.slice(0, 4) ?? '0', 10) || from;
           return to >= minYr && from <= maxYr;
         });
-    map.getSource<GeoJSONSource>(COV_SOURCE)!
-      .setData(isAll ? all : { ...all, features: filtered });
+    map.getSource<GeoJSONSource>(COV_SOURCE)!.setData(isAll ? all : { ...all, features: filtered });
     clearCovSelection(map);
     const filteredKm2 = filtered.reduce((s, f) => s + featureAreaKm2(f), 0);
     const el = document.getElementById('cov-filtered-val');
-    if (el) el.textContent = `${Math.round(filteredKm2).toLocaleString()} km² — ${(filteredKm2 / NZ_AREA_KM2 * 100).toFixed(1)}% of Aotearoa NZ`;
+    if (el)
+      el.textContent = `${Math.round(filteredKm2).toLocaleString()} km² — ${((filteredKm2 / NZ_AREA_KM2) * 100).toFixed(1)}% of Aotearoa NZ`;
   }
 
   // ── DOM ──────────────────────────────────────────────────
@@ -190,7 +200,12 @@ function buildYearRangeSlider(
   const resetBtn = document.createElement('button');
   resetBtn.className = 'yr-reset-btn';
   resetBtn.textContent = 'Reset';
-  resetBtn.addEventListener('click', () => { topIdx = 0; botIdx = N - 1; updateUI(); applyFilter(); });
+  resetBtn.addEventListener('click', () => {
+    topIdx = 0;
+    botIdx = N - 1;
+    updateUI();
+    applyFilter();
+  });
   hd.append(hdLabel, resetBtn);
   section.appendChild(hd);
 
@@ -249,7 +264,7 @@ function buildYearRangeSlider(
 
     const barFill = document.createElement('div');
     barFill.className = 'yr-bar-fill yr-active';
-    barFill.style.width = maxCnt > 0 ? `${(cnt / maxCnt * 100).toFixed(1)}%` : '0%';
+    barFill.style.width = maxCnt > 0 ? `${((cnt / maxCnt) * 100).toFixed(1)}%` : '0%';
     barTrack.appendChild(barFill);
 
     const cntEl = document.createElement('span');
@@ -268,9 +283,12 @@ function buildYearRangeSlider(
   const filteredHd = Object.assign(document.createElement('div'), { className: 'sec-lbl' });
   filteredHd.textContent = 'Filtered coverage';
   filteredHd.style.marginTop = '12px';
-  const filteredVal = Object.assign(document.createElement('div'), { className: 'cov-val', id: 'cov-filtered-val' });
+  const filteredVal = Object.assign(document.createElement('div'), {
+    className: 'cov-val',
+    id: 'cov-filtered-val',
+  });
   const initKm2 = features.reduce((s, f) => s + featureAreaKm2(f), 0);
-  filteredVal.textContent = `${Math.round(initKm2).toLocaleString()} km² — ${(initKm2 / NZ_AREA_KM2 * 100).toFixed(1)}% of Aotearoa NZ`;
+  filteredVal.textContent = `${Math.round(initKm2).toLocaleString()} km² — ${((initKm2 / NZ_AREA_KM2) * 100).toFixed(1)}% of Aotearoa NZ`;
   section.append(filteredHd, filteredVal);
 
   // ── Update UI ────────────────────────────────────────────
@@ -279,8 +297,8 @@ function buildYearRangeSlider(
     const botPx = N > 1 ? (botIdx / (N - 1)) * TRACK_H : 0;
     hTop.style.top = topPx + 'px';
     hBot.style.top = botPx + 'px';
-    fillEl.style.top    = topPx + 'px';
-    fillEl.style.height = (botPx - topPx) + 'px';
+    fillEl.style.top = topPx + 'px';
+    fillEl.style.height = botPx - topPx + 'px';
     years.forEach((_, i) => {
       const on = i >= topIdx && i <= botIdx;
       lblEls[i]?.classList.toggle('yr-active', on);
@@ -292,8 +310,10 @@ function buildYearRangeSlider(
   updateUI();
 
   resetYrSlider = (): void => {
-    topIdx = 0; botIdx = N - 1;
-    updateUI(); applyFilter();
+    topIdx = 0;
+    botIdx = N - 1;
+    updateUI();
+    applyFilter();
   };
 
   // ── Drag ─────────────────────────────────────────────────
@@ -306,7 +326,7 @@ function buildYearRangeSlider(
 
   function idxFromClientY(clientY: number): number {
     const rect = trackEl.getBoundingClientRect();
-    const pct  = Math.max(0, Math.min(1, (clientY - rect.top) / TRACK_H));
+    const pct = Math.max(0, Math.min(1, (clientY - rect.top) / TRACK_H));
     return Math.round(pct * (N - 1));
   }
 
@@ -314,40 +334,52 @@ function buildYearRangeSlider(
     const idx = idxFromClientY(clientY);
     if (dragging === 'top') topIdx = Math.min(idx, botIdx);
     if (dragging === 'bot') botIdx = Math.max(idx, topIdx);
-    updateUI(); applyFilter();
+    updateUI();
+    applyFilter();
   }
 
   function onRangeMove(clientY: number): void {
     const span = dragStartBot - dragStartTop;
     const deltaIdx = Math.round((clientY - dragStartY) / ROW_H);
     const newTop = Math.max(0, Math.min(N - 1 - span, dragStartTop + deltaIdx));
-    topIdx = newTop; botIdx = newTop + span;
-    updateUI(); applyFilter();
+    topIdx = newTop;
+    botIdx = newTop + span;
+    updateUI();
+    applyFilter();
   }
 
   hTop.addEventListener('mousedown', e => {
-    dragging = 'top'; hTop.classList.add('yr-dragging');
-    e.preventDefault(); e.stopPropagation();
+    dragging = 'top';
+    hTop.classList.add('yr-dragging');
+    e.preventDefault();
+    e.stopPropagation();
   });
   hBot.addEventListener('mousedown', e => {
-    dragging = 'bot'; hBot.classList.add('yr-dragging');
-    e.preventDefault(); e.stopPropagation();
+    dragging = 'bot';
+    hBot.classList.add('yr-dragging');
+    e.preventDefault();
+    e.stopPropagation();
   });
   fillEl.addEventListener('mousedown', e => {
     dragging = 'range';
-    dragStartY = e.clientY; dragStartTop = topIdx; dragStartBot = botIdx;
+    dragStartY = e.clientY;
+    dragStartTop = topIdx;
+    dragStartBot = botIdx;
     fillEl.classList.add('yr-dragging');
-    e.preventDefault(); e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
   });
   trackEl.addEventListener('mousedown', e => {
-    trackClickStartY = e.clientY; trackClickActive = true;
+    trackClickStartY = e.clientY;
+    trackClickActive = true;
     e.preventDefault();
   });
 
   document.addEventListener('mousemove', e => {
     if (dragging === 'top' || dragging === 'bot') onHandleMove(e.clientY);
     else if (dragging === 'range') onRangeMove(e.clientY);
-    else if (trackClickActive && Math.abs(e.clientY - trackClickStartY) > 4) trackClickActive = false;
+    else if (trackClickActive && Math.abs(e.clientY - trackClickStartY) > 4)
+      trackClickActive = false;
   });
   document.addEventListener('mouseup', e => {
     if (dragging) {
@@ -359,36 +391,80 @@ function buildYearRangeSlider(
     if (trackClickActive) {
       trackClickActive = false;
       const idx = idxFromClientY(e.clientY);
-      if (idx < topIdx || idx > botIdx) { topIdx = botIdx = idx; updateUI(); applyFilter(); }
+      if (idx < topIdx || idx > botIdx) {
+        topIdx = botIdx = idx;
+        updateUI();
+        applyFilter();
+      }
     }
   });
 
-  hTop.addEventListener('touchstart', e => { dragging = 'top'; e.preventDefault(); }, { passive: false });
-  hBot.addEventListener('touchstart', e => { dragging = 'bot'; e.preventDefault(); }, { passive: false });
-  fillEl.addEventListener('touchstart', e => {
-    dragging = 'range';
-    dragStartY = e.touches[0]?.clientY ?? 0; dragStartTop = topIdx; dragStartBot = botIdx;
-    e.preventDefault();
-  }, { passive: false });
-  trackEl.addEventListener('touchstart', e => {
-    trackClickStartY = e.touches[0]?.clientY ?? 0; trackClickActive = true;
-    e.preventDefault();
-  }, { passive: false });
-  document.addEventListener('touchmove', e => {
-    const y = e.touches[0]?.clientY;
-    if (y === undefined) return;
-    if (dragging === 'top' || dragging === 'bot') { e.preventDefault(); onHandleMove(y); }
-    else if (dragging === 'range') { e.preventDefault(); onRangeMove(y); }
-    else if (trackClickActive && Math.abs(y - trackClickStartY) > 4) trackClickActive = false;
-  }, { passive: false });
+  hTop.addEventListener(
+    'touchstart',
+    e => {
+      dragging = 'top';
+      e.preventDefault();
+    },
+    { passive: false },
+  );
+  hBot.addEventListener(
+    'touchstart',
+    e => {
+      dragging = 'bot';
+      e.preventDefault();
+    },
+    { passive: false },
+  );
+  fillEl.addEventListener(
+    'touchstart',
+    e => {
+      dragging = 'range';
+      dragStartY = e.touches[0]?.clientY ?? 0;
+      dragStartTop = topIdx;
+      dragStartBot = botIdx;
+      e.preventDefault();
+    },
+    { passive: false },
+  );
+  trackEl.addEventListener(
+    'touchstart',
+    e => {
+      trackClickStartY = e.touches[0]?.clientY ?? 0;
+      trackClickActive = true;
+      e.preventDefault();
+    },
+    { passive: false },
+  );
+  document.addEventListener(
+    'touchmove',
+    e => {
+      const y = e.touches[0]?.clientY;
+      if (y === undefined) return;
+      if (dragging === 'top' || dragging === 'bot') {
+        e.preventDefault();
+        onHandleMove(y);
+      } else if (dragging === 'range') {
+        e.preventDefault();
+        onRangeMove(y);
+      } else if (trackClickActive && Math.abs(y - trackClickStartY) > 4) trackClickActive = false;
+    },
+    { passive: false },
+  );
   document.addEventListener('touchend', e => {
-    if (dragging) { dragging = null; return; }
+    if (dragging) {
+      dragging = null;
+      return;
+    }
     if (trackClickActive) {
       trackClickActive = false;
       const touch = e.changedTouches[0];
       if (touch) {
         const idx = idxFromClientY(touch.clientY);
-        if (idx < topIdx || idx > botIdx) { topIdx = botIdx = idx; updateUI(); applyFilter(); }
+        if (idx < topIdx || idx > botIdx) {
+          topIdx = botIdx = idx;
+          updateUI();
+          applyFilter();
+        }
       }
     }
   });
@@ -397,11 +473,11 @@ function buildYearRangeSlider(
 // ── DETAIL CARD ───────────────────────────────────────────────────────────────
 
 function renderCovDetail(props: NormalisedCaptureProperties): void {
-  const title    = props.title    ?? props.Title    ?? '—';
+  const title = props.title ?? props.Title ?? '—';
   const licensor = props.licensor ?? props.Licensor ?? '—';
   const producer = props.producer ?? props.Producer ?? '—';
-  const start    = props.startDate;
-  const end      = props.endDate;
+  const start = props.startDate;
+  const end = props.endDate;
 
   const inner = document.getElementById('cov-detail-inner');
   if (!inner) return;
@@ -427,10 +503,17 @@ function clearCovSelection(map: MaplibreMap): void {
 // ── LOAD ──────────────────────────────────────────────────────────────────────
 
 function unloadCoverage(map: MaplibreMap): void {
-  [...COV_LAYERS].reverse().forEach(id => { if (map.getLayer(id)) map.removeLayer(id); });
+  [...COV_LAYERS].reverse().forEach(id => {
+    if (map.getLayer(id)) map.removeLayer(id);
+  });
   if (map.getSource(COV_SOURCE)) map.removeSource(COV_SOURCE);
-  covLoaded = false; covHoverId = null; covSelectedId = null;
-  covMinDate = null; covMaxDate = null; covAllFeatures = null; resetYrSlider = null;
+  covLoaded = false;
+  covHoverId = null;
+  covSelectedId = null;
+  covMinDate = null;
+  covMaxDate = null;
+  covAllFeatures = null;
+  resetYrSlider = null;
   document.getElementById('yr-range-section')!.innerHTML = '';
   document.getElementById('cov-stats')?.classList.add('hidden');
   document.getElementById('cov-age-section')?.classList.add('hidden');
@@ -440,7 +523,10 @@ function unloadCoverage(map: MaplibreMap): void {
 export function switchCoverageSrc(src: DemDsm, map: MaplibreMap, revealOnLoad = false): void {
   if (src === covActiveSrc && covLoaded) return;
   covActiveSrc = src;
-  if (covLoaded) { unloadCoverage(map); loadCoverage(map, revealOnLoad); }
+  if (covLoaded) {
+    unloadCoverage(map);
+    loadCoverage(map, revealOnLoad);
+  }
 }
 
 export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
@@ -453,16 +539,18 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
       const normFeatures = geojson.features.map((f, i) => {
         const p = f.properties ?? {};
         const start = p.flown_from ?? '';
-        const end   = p.flown_to   ?? '';
+        const end = p.flown_to ?? '';
         const yrFrom = parseInt(start.slice(0, 4), 10);
-        const yrTo   = parseInt(end.slice(0, 4), 10) || yrFrom;
+        const yrTo = parseInt(end.slice(0, 4), 10) || yrFrom;
         const year_label = yrFrom
-          ? (yrTo && yrTo !== yrFrom ? `${yrFrom}-${yrTo}` : `${yrFrom}`)
+          ? yrTo && yrTo !== yrFrom
+            ? `${yrFrom}-${yrTo}`
+            : `${yrFrom}`
           : '';
         const normProps: NormalisedCaptureProperties = {
           ...p,
           startDate: start ? start.slice(0, 10) : '—',
-          endDate:   end   ? end.slice(0, 10)   : '—',
+          endDate: end ? end.slice(0, 10) : '—',
           year_label,
           age_t: 0, // computed below
         };
@@ -470,8 +558,12 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
       });
 
       const featureMids = normFeatures.map(f => {
-        const s = f.properties.flown_from ? tryDate(f.properties.flown_from)?.getTime() ?? null : null;
-        const e = f.properties.flown_to   ? tryDate(f.properties.flown_to)?.getTime()   ?? null : null;
+        const s = f.properties.flown_from
+          ? (tryDate(f.properties.flown_from)?.getTime() ?? null)
+          : null;
+        const e = f.properties.flown_to
+          ? (tryDate(f.properties.flown_to)?.getTime() ?? null)
+          : null;
         if (s !== null && e !== null) return (s + e) / 2;
         return e ?? s ?? null;
       });
@@ -482,7 +574,7 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
 
       const minMs = covMinDate?.getTime() ?? 0;
       const maxMs = covMaxDate?.getTime() ?? 1;
-      const span  = maxMs - minMs || 1;
+      const span = maxMs - minMs || 1;
 
       normFeatures.forEach((f, i) => {
         const mid = featureMids[i] ?? maxMs;
@@ -496,12 +588,11 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
 
       // Coverage area stat
       const totalKm2 = normFeatures.reduce((s, f) => s + featureAreaKm2(f), 0);
-      const totalStr = `${Math.round(totalKm2).toLocaleString()} km² — ${(totalKm2 / NZ_AREA_KM2 * 100).toFixed(1)}% of Aotearoa NZ`;
+      const totalStr = `${Math.round(totalKm2).toLocaleString()} km² — ${((totalKm2 / NZ_AREA_KM2) * 100).toFixed(1)}% of Aotearoa NZ`;
       const statsEl = document.getElementById('cov-stats');
       if (statsEl) {
         statsEl.innerHTML =
-          `<div class="sec-lbl">Total coverage</div>` +
-          `<div class="cov-val">${totalStr}</div>`;
+          `<div class="sec-lbl">Total coverage</div>` + `<div class="cov-val">${totalStr}</div>`;
         statsEl.classList.remove('hidden');
       }
 
@@ -514,45 +605,70 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
       covAllFeatures = normGeoJSON;
       buildYearRangeSlider(normFeatures, map);
 
-      const fillOpacity = Number((document.getElementById('cov-opacity') as HTMLInputElement).value) / 100;
+      const fillOpacity =
+        Number((document.getElementById('cov-opacity') as HTMLInputElement).value) / 100;
 
       map.addLayer({
-        id: COV_FILL, type: 'fill', source: COV_SOURCE,
+        id: COV_FILL,
+        type: 'fill',
+        source: COV_SOURCE,
         layout: { visibility: 'none' },
         paint: {
           'fill-color': buildAgeColorExpr(),
-          'fill-opacity': ['case',
-            ['boolean', ['feature-state', 'selected'], false], Math.min(fillOpacity + 0.25, 1),
-            ['boolean', ['feature-state', 'hover'],    false], Math.min(fillOpacity + 0.15, 1),
+          'fill-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'selected'], false],
+            Math.min(fillOpacity + 0.25, 1),
+            ['boolean', ['feature-state', 'hover'], false],
+            Math.min(fillOpacity + 0.15, 1),
             fillOpacity,
           ],
         },
       });
 
       map.addLayer({
-        id: COV_HOVER, type: 'line', source: COV_SOURCE,
+        id: COV_HOVER,
+        type: 'line',
+        source: COV_SOURCE,
         layout: { visibility: 'none' },
         paint: {
-          'line-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#000000', '#555555'],
-          'line-width': ['case',
-            ['boolean', ['feature-state', 'selected'], false], 2,
-            ['boolean', ['feature-state', 'hover'],    false], 1.5, 0,
+          'line-color': [
+            'case',
+            ['boolean', ['feature-state', 'selected'], false],
+            '#000000',
+            '#555555',
           ],
-          'line-opacity': ['case',
-            ['boolean', ['feature-state', 'hover'],    false], 1,
-            ['boolean', ['feature-state', 'selected'], false], 1, 0,
+          'line-width': [
+            'case',
+            ['boolean', ['feature-state', 'selected'], false],
+            2,
+            ['boolean', ['feature-state', 'hover'], false],
+            1.5,
+            0,
+          ],
+          'line-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            1,
+            ['boolean', ['feature-state', 'selected'], false],
+            1,
+            0,
           ],
         },
       });
 
       map.addLayer({
-        id: COV_OUTLINE, type: 'line', source: COV_SOURCE,
+        id: COV_OUTLINE,
+        type: 'line',
+        source: COV_SOURCE,
         layout: { visibility: 'none' },
         paint: { 'line-color': 'rgba(0,0,0,0.2)' },
       });
 
       map.addLayer({
-        id: COV_LABELS, type: 'symbol', source: COV_SOURCE,
+        id: COV_LABELS,
+        type: 'symbol',
+        source: COV_SOURCE,
         layout: {
           'text-field': ['get', 'year_label'],
           'text-font': ['Open Sans Bold'],
@@ -605,14 +721,19 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
 
       // Click outside polygons — clear selection
       map.on('click', () => {
-        if (clickedPolygon) { clickedPolygon = false; return; }
+        if (clickedPolygon) {
+          clickedPolygon = false;
+          return;
+        }
         if (map.getLayoutProperty(COV_FILL, 'visibility') !== 'visible') return;
         clearCovSelection(map);
       });
 
       // Reveal layers (only when entering Coverage tab directly)
       if (revealOnLoad) {
-        COV_LAYERS.forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible'); });
+        COV_LAYERS.forEach(id => {
+          if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
+        });
       }
     })
     .catch(err => console.error('Coverage load failed:', err));
@@ -621,11 +742,15 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
 // ── ENTER / LEAVE ─────────────────────────────────────────────────────────────
 
 export function showCoverageLayers(map: MaplibreMap): void {
-  COV_LAYERS.forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible'); });
+  COV_LAYERS.forEach(id => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
+  });
 }
 
 export function hideCoverageLayers(map: MaplibreMap): void {
-  COV_LAYERS.forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none'); });
+  COV_LAYERS.forEach(id => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+  });
   resetYrSlider?.();
 }
 
@@ -639,21 +764,32 @@ export function initCoverageControls(map: MaplibreMap): void {
     el<HTMLSpanElement>('cov-opacity-v').textContent = v + '%';
     if (!map.getLayer(COV_FILL)) return;
     const op = v / 100;
-    map.setPaintProperty(COV_FILL, 'fill-opacity', ['case',
-      ['boolean', ['feature-state', 'selected'], false], Math.min(op + 0.25, 1),
-      ['boolean', ['feature-state', 'hover'],    false], Math.min(op + 0.15, 1),
+    map.setPaintProperty(COV_FILL, 'fill-opacity', [
+      'case',
+      ['boolean', ['feature-state', 'selected'], false],
+      Math.min(op + 0.25, 1),
+      ['boolean', ['feature-state', 'hover'], false],
+      Math.min(op + 0.15, 1),
       op,
     ]);
   });
 
   el<HTMLInputElement>('tog-cov-labels').addEventListener('change', e => {
     if (!map.getLayer(COV_LABELS)) return;
-    map.setLayoutProperty(COV_LABELS, 'visibility', (e.target as HTMLInputElement).checked ? 'visible' : 'none');
+    map.setLayoutProperty(
+      COV_LABELS,
+      'visibility',
+      (e.target as HTMLInputElement).checked ? 'visible' : 'none',
+    );
   });
 
   el<HTMLInputElement>('tog-cov-outline').addEventListener('change', e => {
     if (!map.getLayer(COV_OUTLINE)) return;
-    map.setLayoutProperty(COV_OUTLINE, 'visibility', (e.target as HTMLInputElement).checked ? 'visible' : 'none');
+    map.setLayoutProperty(
+      COV_OUTLINE,
+      'visibility',
+      (e.target as HTMLInputElement).checked ? 'visible' : 'none',
+    );
   });
 
   el<HTMLButtonElement>('cov-clear-btn').addEventListener('click', () => clearCovSelection(map));

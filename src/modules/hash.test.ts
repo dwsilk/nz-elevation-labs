@@ -19,7 +19,9 @@ describe('readHash', () => {
   it('parses k=v pairs separated by &', () => {
     setLocation('#mode=hillshade&preset=dynamic.igor&dataset=dsm');
     expect(readHash()).toEqual({
-      mode: 'hillshade', preset: 'dynamic.igor', dataset: 'dsm',
+      mode: 'hillshade',
+      preset: 'dynamic.igor',
+      dataset: 'dsm',
     });
   });
 

@@ -6,26 +6,41 @@
   pointer-events: auto;
   /* Container shrinks to the pill toggle's width so the box-shadow / hover
      background hugs the text instead of the MapLibre control-group cell. */
-  display: inline-block; width: max-content;
+  display: inline-block;
+  width: max-content;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 4px;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
 }
 
 .bm-ctrl .bm-toggle {
-  display: flex; align-items: center; gap: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: transparent;
-  border: none; padding: 7px 12px;
-  font-family: var(--font); font-size: 12px; font-weight: 600;
-  color: var(--whatu-dark, #333); cursor: pointer;
-  border-radius: 4px; white-space: nowrap;
-  transition: background .15s, color .15s;
+  border: none;
+  padding: 7px 12px;
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--whatu-dark, #333);
+  cursor: pointer;
+  border-radius: 4px;
+  white-space: nowrap;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
-.bm-ctrl .bm-toggle:hover { background: var(--blue-lt); color: var(--navy); }
+.bm-ctrl .bm-toggle:hover {
+  background: var(--blue-lt);
+  color: var(--navy);
+}
 
 .bm-ctrl .bm-menu {
   display: none;
-  position: absolute; bottom: 100%; left: 0;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
   margin-bottom: 8px;
   min-width: 200px;
   background: #fff;
@@ -34,31 +49,52 @@
   box-shadow: 0 4px 14px rgba(0, 66, 93, 0.18);
   padding: 8px;
 }
-.bm-ctrl.open .bm-menu { display: block; }
+.bm-ctrl.open .bm-menu {
+  display: block;
+}
 
 .bm-ctrl .bm-grp-lbl {
-  font-size: 9px; font-weight: 700; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--mid);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mid);
   padding: 6px 6px 4px;
 }
 
 .bm-ctrl .bm-opt {
-  display: flex; align-items: center; gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 6px 6px;
-  font-size: 12px; color: var(--whatu-dark, #333);
-  cursor: pointer; border-radius: 3px;
-  transition: background .12s;
+  font-size: 12px;
+  color: var(--whatu-dark, #333);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.12s;
 }
-.bm-ctrl .bm-opt:hover { background: var(--blue-lt); }
-.bm-ctrl .bm-opt.disabled { color: var(--whatu-light, #b7b2ad); cursor: not-allowed; }
-.bm-ctrl .bm-opt.disabled:hover { background: transparent; }
-.bm-ctrl .bm-opt.disabled input { cursor: not-allowed; }
+.bm-ctrl .bm-opt:hover {
+  background: var(--blue-lt);
+}
+.bm-ctrl .bm-opt.disabled {
+  color: var(--whatu-light, #b7b2ad);
+  cursor: not-allowed;
+}
+.bm-ctrl .bm-opt.disabled:hover {
+  background: transparent;
+}
+.bm-ctrl .bm-opt.disabled input {
+  cursor: not-allowed;
+}
 
-.bm-ctrl .bm-opt input[type="radio"],
-.bm-ctrl .bm-opt input[type="checkbox"] {
+.bm-ctrl .bm-opt input[type='radio'],
+.bm-ctrl .bm-opt input[type='checkbox'] {
   accent-color: var(--blue);
   margin: 0;
   flex-shrink: 0;
 }
 
-.bm-ctrl .bm-opt span { flex: 1; user-select: none; }
+.bm-ctrl .bm-opt span {
+  flex: 1;
+  user-select: none;
+}

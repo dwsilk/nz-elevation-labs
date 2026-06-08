@@ -7,8 +7,13 @@
 import type { Map as MaplibreMap, GeoJSONSource } from 'maplibre-gl';
 import type { Feature, Polygon } from 'geojson';
 import {
-  EXP_SOURCE, EXP_FILL, EXP_HOVER, EXP_OUTLINE, EXP_LAYERS,
-  STAC_COLLECTIONS, type DemDsm,
+  EXP_SOURCE,
+  EXP_FILL,
+  EXP_HOVER,
+  EXP_OUTLINE,
+  EXP_LAYERS,
+  STAC_COLLECTIONS,
+  type DemDsm,
 } from './config.js';
 
 // ── TYPES ─────────────────────────────────────────────────────────────────────
@@ -21,8 +26,14 @@ interface ExportProps {
   downloadUrl: string;
 }
 
-interface StacLink { href?: string; rel?: string }
-interface StacAsset { href?: string; type?: string }
+interface StacLink {
+  href?: string;
+  rel?: string;
+}
+interface StacAsset {
+  href?: string;
+  type?: string;
+}
 interface StacItem {
   id?: string;
   bbox?: number[];
@@ -30,7 +41,9 @@ interface StacItem {
   properties?: { start_datetime?: string; end_datetime?: string };
   assets?: Record<string, StacAsset>;
 }
-interface StacCollection { links?: StacLink[] }
+interface StacCollection {
+  links?: StacLink[];
+}
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
 
@@ -45,7 +58,10 @@ let _eventsBound = false;
 let _totalItems = 0;
 let _updatePending = false;
 /** STAC item id → headers parsed from a HEAD on the asset; absent ⇒ not fetched yet. */
-interface ItemMeta { updated: string; size: string }
+interface ItemMeta {
+  updated: string;
+  size: string;
+}
 const _itemMetaCache = new Map<string, ItemMeta>();
 
 function el<T extends HTMLElement>(id: string): T | null {
@@ -54,14 +70,20 @@ function el<T extends HTMLElement>(id: string): T | null {
 
 // ── PUBLIC API ────────────────────────────────────────────────────────────────
 
-export function setExportActiveSrc(src: DemDsm): void { _activeSrc = src; }
+export function setExportActiveSrc(src: DemDsm): void {
+  _activeSrc = src;
+}
 
 export function showExportLayers(map: MaplibreMap): void {
-  EXP_LAYERS.forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible'); });
+  EXP_LAYERS.forEach(id => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'visible');
+  });
 }
 
 export function hideExportLayers(map: MaplibreMap): void {
-  EXP_LAYERS.forEach(id => { if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none'); });
+  EXP_LAYERS.forEach(id => {
+    if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', 'none');
+  });
 }
 
 export function switchExportSrc(src: DemDsm, map: MaplibreMap, revealOnLoad = false): void {
@@ -92,7 +114,8 @@ export function loadExport(map: MaplibreMap, src?: DemDsm, revealOnLoad = true):
 
   _activeSrc = target;
   _features = [];
-  _hoverId = null; _selectedId = null;
+  _hoverId = null;
+  _selectedId = null;
   _totalItems = 0;
   updateProgress(0, 0);
 
@@ -105,36 +128,58 @@ export function loadExport(map: MaplibreMap, src?: DemDsm, revealOnLoad = true):
   const initialVisibility: 'visible' | 'none' = revealOnLoad ? 'visible' : 'none';
 
   map.addLayer({
-    id: EXP_FILL, type: 'fill', source: EXP_SOURCE,
+    id: EXP_FILL,
+    type: 'fill',
+    source: EXP_SOURCE,
     layout: { visibility: initialVisibility },
     paint: {
       'fill-color': '#0064c8',
-      'fill-opacity': ['case',
-        ['boolean', ['feature-state', 'selected'], false], 0.30,
-        ['boolean', ['feature-state', 'hover'],    false], 0.18,
+      'fill-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        0.3,
+        ['boolean', ['feature-state', 'hover'], false],
+        0.18,
         0.04,
       ],
     },
   });
 
   map.addLayer({
-    id: EXP_HOVER, type: 'line', source: EXP_SOURCE,
+    id: EXP_HOVER,
+    type: 'line',
+    source: EXP_SOURCE,
     layout: { visibility: initialVisibility },
     paint: {
-      'line-color': ['case', ['boolean', ['feature-state', 'selected'], false], '#00335b', '#0064c8'],
-      'line-width': ['case',
-        ['boolean', ['feature-state', 'selected'], false], 2.5,
-        ['boolean', ['feature-state', 'hover'],    false], 1.8, 0,
+      'line-color': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        '#00335b',
+        '#0064c8',
       ],
-      'line-opacity': ['case',
-        ['boolean', ['feature-state', 'selected'], false], 1,
-        ['boolean', ['feature-state', 'hover'],    false], 1, 0,
+      'line-width': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        2.5,
+        ['boolean', ['feature-state', 'hover'], false],
+        1.8,
+        0,
+      ],
+      'line-opacity': [
+        'case',
+        ['boolean', ['feature-state', 'selected'], false],
+        1,
+        ['boolean', ['feature-state', 'hover'], false],
+        1,
+        0,
       ],
     },
   });
 
   map.addLayer({
-    id: EXP_OUTLINE, type: 'line', source: EXP_SOURCE,
+    id: EXP_OUTLINE,
+    type: 'line',
+    source: EXP_SOURCE,
     layout: { visibility: initialVisibility },
     paint: { 'line-color': 'rgba(0,51,91,0.45)', 'line-width': 0.6 },
   });
@@ -151,7 +196,7 @@ async function streamItems(src: DemDsm, gen: number): Promise<void> {
   const collUrl = STAC_COLLECTIONS[src];
   let coll: StacCollection;
   try {
-    coll = await fetch(collUrl).then(r => r.json()) as StacCollection;
+    coll = (await fetch(collUrl).then(r => r.json())) as StacCollection;
   } catch (err) {
     console.error('STAC collection fetch failed:', err);
     return;
@@ -171,7 +216,7 @@ async function streamItems(src: DemDsm, gen: number): Promise<void> {
       const link = itemLinks[i]!;
       const itemUrl = new URL(link.href!, collUrl).href;
       try {
-        const item = await fetch(itemUrl).then(r => r.json()) as StacItem;
+        const item = (await fetch(itemUrl).then(r => r.json())) as StacItem;
         if (gen !== _loadGen) return;
         const feat = itemToFeature(item, itemUrl, i);
         if (feat) {
@@ -187,7 +232,11 @@ async function streamItems(src: DemDsm, gen: number): Promise<void> {
   await Promise.all(Array.from({ length: N }, worker));
 }
 
-function itemToFeature(item: StacItem, itemUrl: string, index: number): Feature<Polygon, ExportProps> | null {
+function itemToFeature(
+  item: StacItem,
+  itemUrl: string,
+  index: number,
+): Feature<Polygon, ExportProps> | null {
   if (!item.id || item.geometry?.type !== 'Polygon') return null;
   const assets = item.assets ?? {};
   let asset: StacAsset | undefined = assets['visual'];
@@ -202,7 +251,7 @@ function itemToFeature(item: StacItem, itemUrl: string, index: number): Feature<
     properties: {
       id: item.id,
       start: item.properties?.start_datetime?.slice(0, 10) ?? '',
-      end:   item.properties?.end_datetime?.slice(0, 10)   ?? '',
+      end: item.properties?.end_datetime?.slice(0, 10) ?? '',
       downloadUrl: new URL(asset.href, itemUrl).href,
     },
   };
@@ -240,14 +289,17 @@ function bindEventsOnce(map: MaplibreMap): void {
   map.on('mousemove', EXP_FILL, e => {
     map.getCanvas().style.cursor = 'pointer';
     const id = (e.features?.[0]?.id ?? null) as number | null;
-    if (_hoverId !== null && _hoverId !== id) map.setFeatureState({ source: EXP_SOURCE, id: _hoverId }, { hover: false });
+    if (_hoverId !== null && _hoverId !== id)
+      map.setFeatureState({ source: EXP_SOURCE, id: _hoverId }, { hover: false });
     _hoverId = id;
-    if (_hoverId !== null) map.setFeatureState({ source: EXP_SOURCE, id: _hoverId }, { hover: true });
+    if (_hoverId !== null)
+      map.setFeatureState({ source: EXP_SOURCE, id: _hoverId }, { hover: true });
   });
 
   map.on('mouseleave', EXP_FILL, () => {
     map.getCanvas().style.cursor = '';
-    if (_hoverId !== null) map.setFeatureState({ source: EXP_SOURCE, id: _hoverId }, { hover: false });
+    if (_hoverId !== null)
+      map.setFeatureState({ source: EXP_SOURCE, id: _hoverId }, { hover: false });
     _hoverId = null;
   });
 
@@ -256,15 +308,20 @@ function bindEventsOnce(map: MaplibreMap): void {
     const f = e.features?.[0];
     if (!f) return;
     const id = f.id as number;
-    if (_selectedId !== null && _selectedId !== id) map.setFeatureState({ source: EXP_SOURCE, id: _selectedId }, { selected: false });
+    if (_selectedId !== null && _selectedId !== id)
+      map.setFeatureState({ source: EXP_SOURCE, id: _selectedId }, { selected: false });
     _selectedId = id;
     map.setFeatureState({ source: EXP_SOURCE, id: _selectedId }, { selected: true });
     renderDetail(f.properties as unknown as ExportProps);
   });
 
   map.on('click', () => {
-    if (clickedTile) { clickedTile = false; return; }
-    if (!map.getLayer(EXP_FILL) || map.getLayoutProperty(EXP_FILL, 'visibility') !== 'visible') return;
+    if (clickedTile) {
+      clickedTile = false;
+      return;
+    }
+    if (!map.getLayer(EXP_FILL) || map.getLayoutProperty(EXP_FILL, 'visibility') !== 'visible')
+      return;
     clearSelection(map);
   });
 }
@@ -272,7 +329,8 @@ function bindEventsOnce(map: MaplibreMap): void {
 function renderDetail(p: ExportProps): void {
   const inner = el<HTMLDivElement>('exp-detail-inner');
   if (!inner) return;
-  const range = p.start && p.end && p.start !== p.end ? `${p.start} → ${p.end}` : (p.start || p.end || '—');
+  const range =
+    p.start && p.end && p.start !== p.end ? `${p.start} → ${p.end}` : p.start || p.end || '—';
   const meta = _itemMetaCache.get(p.id);
   inner.innerHTML =
     `<div class="exp-row"><span class="exp-lbl">Tile</span><span class="exp-val">${p.id}</span></div>` +
@@ -288,8 +346,12 @@ function renderDetail(p: ExportProps): void {
 export function formatBytes(n: number): string {
   if (!isFinite(n) || n <= 0) return '—';
   const u = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let i = 0, v = n;
-  while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+  let i = 0,
+    v = n;
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i++;
+  }
   // Coarser precision as numbers get bigger — "1.23 KB" reads fine, "234.56 MB"
   // is just noise. 1024-based units keep the displayed numbers in line with
   // what S3 / browser dev-tools report.
@@ -315,9 +377,13 @@ async function fetchItemMeta(tileId: string, url: string): Promise<void> {
   _itemMetaCache.set(tileId, { updated, size });
   // Only update DOM cells if this tile is still the one displayed (selectors
   // are unique per tile id and disappear when a different tile is selected).
-  const updEl  = document.querySelector<HTMLSpanElement>(`[data-last-updated="${CSS.escape(tileId)}"]`);
-  if (updEl)  updEl.textContent  = updated;
-  const sizeEl = document.querySelector<HTMLSpanElement>(`[data-tile-size="${CSS.escape(tileId)}"]`);
+  const updEl = document.querySelector<HTMLSpanElement>(
+    `[data-last-updated="${CSS.escape(tileId)}"]`,
+  );
+  if (updEl) updEl.textContent = updated;
+  const sizeEl = document.querySelector<HTMLSpanElement>(
+    `[data-tile-size="${CSS.escape(tileId)}"]`,
+  );
   if (sizeEl) sizeEl.textContent = size;
 }
 
@@ -330,7 +396,9 @@ function clearSelection(map: MaplibreMap): void {
 }
 
 function unloadExport(map: MaplibreMap): void {
-  [...EXP_LAYERS].reverse().forEach(id => { if (map.getLayer(id)) map.removeLayer(id); });
+  [...EXP_LAYERS].reverse().forEach(id => {
+    if (map.getLayer(id)) map.removeLayer(id);
+  });
   if (map.getSource(EXP_SOURCE)) map.removeSource(EXP_SOURCE);
   _features = [];
   _hoverId = null;

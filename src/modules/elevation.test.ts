@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  hex2rgb, rgbToHex, colorAt, buildColorExpr,
-  type ColourStop,
-} from './elevation.js';
+import { hex2rgb, rgbToHex, colorAt, buildColorExpr, type ColourStop } from './elevation.js';
 
 describe('hex2rgb / rgbToHex', () => {
   it('round-trips canonical hex colours', () => {
@@ -24,7 +21,7 @@ describe('hex2rgb / rgbToHex', () => {
 
 describe('colorAt', () => {
   const stops: ColourStop[] = [
-    { e: 0,    c: '#000000' },
+    { e: 0, c: '#000000' },
     { e: 1000, c: '#808080' },
     { e: 2000, c: '#ffffff' },
   ];
@@ -54,7 +51,7 @@ describe('colorAt', () => {
   it('sorts the input internally — order-of-stops must not matter', () => {
     const shuffled: ColourStop[] = [
       { e: 2000, c: '#ffffff' },
-      { e: 0,    c: '#000000' },
+      { e: 0, c: '#000000' },
       { e: 1000, c: '#808080' },
     ];
     expect(colorAt(500, shuffled)).toEqual([64, 64, 64]);
@@ -65,21 +62,25 @@ describe('colorAt', () => {
 describe('buildColorExpr', () => {
   it('emits MapLibre interpolate-linear with elevation-color pairs', () => {
     const stops: ColourStop[] = [
-      { e: 0,    c: '#000000' },
+      { e: 0, c: '#000000' },
       { e: 1000, c: '#ffffff' },
     ];
     expect(buildColorExpr(stops)).toEqual([
-      'interpolate', ['linear'], ['elevation'],
-      0,    '#000000',
-      1000, '#ffffff',
+      'interpolate',
+      ['linear'],
+      ['elevation'],
+      0,
+      '#000000',
+      1000,
+      '#ffffff',
     ]);
   });
 
   it('sorts stops by elevation before emitting (URL state can hand us any order)', () => {
     const shuffled: ColourStop[] = [
       { e: 1500, c: '#222222' },
-      { e: 0,    c: '#000000' },
-      { e: 800,  c: '#111111' },
+      { e: 0, c: '#000000' },
+      { e: 800, c: '#111111' },
     ];
     const expr = buildColorExpr(shuffled);
     // Drop the leading ['interpolate', ['linear'], ['elevation']] and read pairs.
@@ -92,7 +93,7 @@ describe('buildColorExpr', () => {
   it('does not mutate the caller-supplied stops array', () => {
     const stops: ColourStop[] = [
       { e: 1000, c: '#111111' },
-      { e: 0,    c: '#000000' },
+      { e: 0, c: '#000000' },
     ];
     const snapshot = stops.map(s => ({ ...s }));
     buildColorExpr(stops);
