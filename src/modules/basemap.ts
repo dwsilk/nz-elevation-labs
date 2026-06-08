@@ -20,7 +20,7 @@
  */
 import type {
   Map as MaplibreMap, IControl,
-  StyleSpecification, LayerSpecification, SourceSpecification,
+  StyleSpecification, LayerSpecification,
 } from 'maplibre-gl';
 import { API, ELEV_URL, DSM_URL } from './config.js';
 
@@ -90,7 +90,7 @@ export function initBasemap(
   // Apply the default basemap once the map's style is ready. Labels and the
   // Hillshade Blend are applied on demand by restoreFromHash / control clicks.
   if (map.isStyleLoaded()) void applyBasemap();
-  else map.once('style.load', () => void applyBasemap());
+  else void map.once('style.load', () => void applyBasemap());
 }
 
 /** Public setter — called by the UI and by URL-hash restore on load. */
@@ -259,7 +259,7 @@ async function injectVectorStyle(
   for (const [origId, src] of Object.entries(style.sources ?? {})) {
     const newId = `${prefix}${origId}`;
     srcRemap[origId] = newId;
-    if (!map.getSource(newId)) map.addSource(newId, src as SourceSpecification);
+    if (!map.getSource(newId)) map.addSource(newId, src);
     srcRegistry.add(newId);
   }
 
@@ -268,7 +268,7 @@ async function injectVectorStyle(
     if (layer.type === 'background') continue; // we have our own background
     const remapped: LayerSpecification = { ...(layer as LayerSpecification), id: `${prefix}${layer.id}` };
     if ('source' in remapped && remapped.source) {
-      const r = srcRemap[remapped.source as string];
+      const r = srcRemap[remapped.source];
       if (r) remapped.source = r;
     }
     if (map.getLayer(remapped.id)) continue;

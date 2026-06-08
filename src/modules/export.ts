@@ -4,8 +4,8 @@
  * source GeoTIFF for download. Items are streamed in as they're fetched
  * (~424 per dataset, ~20 concurrent) so tiles appear progressively.
  */
-import type { Map as MaplibreMap, GeoJSONSource, GeoJSONSourceSpecification } from 'maplibre-gl';
-import type { Feature, FeatureCollection, Polygon } from 'geojson';
+import type { Map as MaplibreMap, GeoJSONSource } from 'maplibre-gl';
+import type { Feature, Polygon } from 'geojson';
 import {
   EXP_SOURCE, EXP_FILL, EXP_HOVER, EXP_OUTLINE, EXP_LAYERS,
   STAC_COLLECTIONS, type DemDsm,
@@ -98,9 +98,9 @@ export function loadExport(map: MaplibreMap, src?: DemDsm, revealOnLoad = true):
 
   map.addSource(EXP_SOURCE, {
     type: 'geojson',
-    data: { type: 'FeatureCollection', features: [] } as FeatureCollection,
+    data: { type: 'FeatureCollection', features: [] },
     promoteId: 'id',
-  } as GeoJSONSourceSpecification);
+  });
 
   const initialVisibility: 'visible' | 'none' = revealOnLoad ? 'visible' : 'none';
 
@@ -188,10 +188,10 @@ async function streamItems(src: DemDsm, gen: number): Promise<void> {
 }
 
 function itemToFeature(item: StacItem, itemUrl: string, index: number): Feature<Polygon, ExportProps> | null {
-  if (!item.id || !item.geometry || item.geometry.type !== 'Polygon') return null;
+  if (!item.id || item.geometry?.type !== 'Polygon') return null;
   const assets = item.assets ?? {};
   let asset: StacAsset | undefined = assets['visual'];
-  if (!asset || !asset.type?.includes('tiff')) {
+  if (!asset?.type?.includes('tiff')) {
     asset = Object.values(assets).find(a => a?.type?.includes('tiff'));
   }
   if (!asset?.href) return null;
@@ -213,7 +213,7 @@ function scheduleSourceUpdate(): void {
   _updatePending = true;
   requestAnimationFrame(() => {
     _updatePending = false;
-    const src = _map?.getSource(EXP_SOURCE) as GeoJSONSource | undefined;
+    const src = _map?.getSource<GeoJSONSource>(EXP_SOURCE);
     if (src) src.setData({ type: 'FeatureCollection', features: _features });
   });
 }

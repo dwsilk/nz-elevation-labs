@@ -183,7 +183,7 @@ function handleSpotClick(lngLat: LngLat): void {
     void demHeightAtAsync(_activeSrc, lngLat.lng, lngLat.lat, _map.getZoom()).then(elev => {
       // Only update if this is still the pinned spot.
       const here = _spotMarker?.getLngLat();
-      if (here && here.lng === lngLat.lng && here.lat === lngLat.lat) {
+      if (here?.lng === lngLat.lng && here.lat === lngLat.lat) {
         renderSpotDetail(lngLat, elev);
       }
     });
@@ -281,7 +281,7 @@ function renderProfileChart(totalM: number): void {
   for (const v of valid) { if (v.elev < rawMin) rawMin = v.elev; if (v.elev > rawMax) rawMax = v.elev; }
 
   // Snap to nearest 100 m below / above.
-  let yMin = Math.floor(rawMin / 100) * 100;
+  const yMin = Math.floor(rawMin / 100) * 100;
   let yMax = Math.ceil (rawMax / 100) * 100;
   if (yMax === yMin) yMax = yMin + 100; // ensure at least one 100 m step
   const yRange = yMax - yMin;
@@ -403,7 +403,7 @@ function ensureLineLayer(map: MaplibreMap): void {
 
 function setLineData(coords: number[][]): void {
   if (!_map) return;
-  const src = _map.getSource(INSPECT_LINE_SOURCE) as GeoJSONSource | undefined;
+  const src = _map.getSource<GeoJSONSource>(INSPECT_LINE_SOURCE);
   if (!src) return;
   if (coords.length < 2) {
     src.setData({ type: 'FeatureCollection', features: [] });

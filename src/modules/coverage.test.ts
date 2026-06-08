@@ -96,7 +96,7 @@ describe('featureAreaKm2', () => {
   it('returns 0 for non-polygon geometries', () => {
     const lineFeat = {
       type: 'Feature',
-      geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] } as Geometry,
+      geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
       properties: emptyProps(),
     } as Feature<Geometry, NormalisedCaptureProperties>;
     expect(featureAreaKm2(lineFeat)).toBe(0);

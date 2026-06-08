@@ -2,7 +2,7 @@
  * Coverage tab — LINZ NZ elevation capture-dates GeoJSON,
  * age-ramp choropleth, hover/click/year-filter UI.
  */
-import type { Map as MaplibreMap, ExpressionSpecification, GeoJSONSourceSpecification } from 'maplibre-gl';
+import type { Map as MaplibreMap, ExpressionSpecification, GeoJSONSource } from 'maplibre-gl';
 import type { FeatureCollection, Feature, Geometry } from 'geojson';
 import {
   COV_GEOJSONS, COV_SOURCE, COV_FILL, COV_HOVER,
@@ -38,14 +38,19 @@ export interface NormalisedCaptureProperties extends RawCaptureProperties {
 const covRawCache: Partial<Record<DemDsm, Promise<FeatureCollection<Geometry, RawCaptureProperties>>>> = {};
 
 function fetchRaw(src: DemDsm): Promise<FeatureCollection<Geometry, RawCaptureProperties>> {
-  if (!covRawCache[src]) {
-    covRawCache[src] = fetch(COV_GEOJSONS[src]).then(r => r.json() as Promise<FeatureCollection<Geometry, RawCaptureProperties>>);
-  }
-  return covRawCache[src]!;
+  // Local-variable narrowing instead of `covRawCache[src]!` so TS picks up
+  // the "definitely assigned" state after the cache miss.
+  const cached = covRawCache[src];
+  if (cached) return cached;
+  const p = fetch(COV_GEOJSONS[src]).then(r => r.json() as Promise<FeatureCollection<Geometry, RawCaptureProperties>>);
+  covRawCache[src] = p;
+  return p;
 }
 
 export function prefetchCoverage(): void {
-  fetchRaw('dem');
+  // Fire-and-forget — the cache fills in the background; later loadCoverage
+  // calls will await the same Promise via the cache hit.
+  void fetchRaw('dem');
 }
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
@@ -166,7 +171,7 @@ function buildYearRangeSlider(
           const to   = parseInt(f.properties.flown_to?.slice(0, 4)   ?? '0', 10) || from;
           return to >= minYr && from <= maxYr;
         });
-    (map.getSource(COV_SOURCE) as ReturnType<typeof map.getSource> & { setData: (d: unknown) => void })
+    map.getSource<GeoJSONSource>(COV_SOURCE)!
       .setData(isAll ? all : { ...all, features: filtered });
     clearCovSelection(map);
     const filteredKm2 = filtered.reduce((s, f) => s + featureAreaKm2(f), 0);
@@ -461,7 +466,7 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
           year_label,
           age_t: 0, // computed below
         };
-        return { ...f, id: i, properties: normProps } as Feature<Geometry, NormalisedCaptureProperties>;
+        return { ...f, id: i, properties: normProps };
       });
 
       const featureMids = normFeatures.map(f => {
@@ -505,7 +510,7 @@ export function loadCoverage(map: MaplibreMap, revealOnLoad = true): void {
       document.getElementById('cov-age-oldest')!.textContent = dateToYMD(covMinDate);
       document.getElementById('cov-age-section')?.classList.remove('hidden');
 
-      map.addSource(COV_SOURCE, { type: 'geojson', data: normGeoJSON, promoteId: 'id' } as GeoJSONSourceSpecification);
+      map.addSource(COV_SOURCE, { type: 'geojson', data: normGeoJSON, promoteId: 'id' });
       covAllFeatures = normGeoJSON;
       buildYearRangeSlider(normFeatures, map);
 

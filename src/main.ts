@@ -3,7 +3,8 @@
  * Initialises the MapLibre map, wires all panel tabs, and coordinates
  * between the elevation, contour, and coverage modules.
  */
-import maplibregl, { Map as MaplibreMap, NavigationControl, ScaleControl, RasterTileSource } from 'maplibre-gl';
+import type { RasterTileSource, IControl } from 'maplibre-gl';
+import { Map as MaplibreMap, NavigationControl, ScaleControl } from 'maplibre-gl';
 import {
   API, ELEV_URL, DSM_URL, HS_URLS, AERIAL_URL,
   MAP_CENTER, MAP_ZOOM,
@@ -29,7 +30,7 @@ import {
 import { registerDiffProtocol, buildDiffColorExpr } from './modules/diff.js';
 import { registerAnalysisProtocol } from './modules/analysis.js';
 import { initInspectControls, attachInspect, detachInspect, setInspectActiveSrc } from './modules/inspect.js';
-import { initBasemap, isBasemapOrLabelLayer, moveLabelsToTop, setBasemap, setLabelsEnabled, setHillshadeBlend, type BasemapId, type HillshadeBlend } from './modules/basemap.js';
+import { initBasemap, isBasemapOrLabelLayer, moveLabelsToTop, setBasemap, setLabelsEnabled, setHillshadeBlend } from './modules/basemap.js';
 import { initTerrainPreviews } from './modules/hs-thumbs.js';
 import { readHash, setHashParam } from './modules/hash.js';
 
@@ -205,7 +206,7 @@ const map = new MaplibreMap({
 
 map.addControl(new NavigationControl(), 'top-left');
 
-class Btn3DControl implements maplibregl.IControl {
+class Btn3DControl implements IControl {
   private _container!: HTMLDivElement;
   onAdd(): HTMLElement {
     this._container = document.createElement('div');
@@ -378,7 +379,7 @@ function renderRampMarkers(): void {
         if (curIdx < cur.length - 1) newE = Math.min(cur[curIdx + 1]!.e - 1, newE);
         s.e = newE;
         const rowInputs = el('stop-list').querySelectorAll<HTMLInputElement>('input[type=number]');
-        if (rowInputs[curIdx]) rowInputs[curIdx]!.value = String(newE);
+        if (rowInputs[curIdx]) rowInputs[curIdx].value = String(newE);
         const ns = [...stops].sort((a, b) => a.e - b.e);
         handle.style.left = `${(newE - ns[0]!.e) / (ns[ns.length - 1]!.e - ns[0]!.e || 1) * 100}%`;
         handle.title = `${newE} m`;
@@ -440,19 +441,19 @@ function applyHsPreset(src: HsSource): void {
     setVis('hillshade', true);
     setVis('hillshade-raster-layer', false);
     setVis(ANALYSIS_LAYER, false);
-    map.setPaintProperty('hillshade', 'hillshade-method', method as HsMethod);
+    map.setPaintProperty('hillshade', 'hillshade-method', method);
     map.setPaintProperty('hillshade', 'hillshade-exaggeration', terrainExag);
   } else if (type === 'raster') {
     setVis('hillshade', false);
     setVis('hillshade-raster-layer', true);
     setVis(ANALYSIS_LAYER, false);
-    (map.getSource('hillshade-raster') as RasterTileSource).setTiles([HS_URLS[method as HsRaster][activeSrc]]);
+    map.getSource<RasterTileSource>('hillshade-raster')!.setTiles([HS_URLS[method as HsRaster][activeSrc]]);
     map.setPaintProperty('hillshade-raster-layer', 'raster-opacity', 1.0);
   } else { // analysis
     setVis('hillshade', false);
     setVis('hillshade-raster-layer', false);
     setVis(ANALYSIS_LAYER, true);
-    (map.getSource(ANALYSIS_SOURCE) as RasterTileSource)
+    map.getSource<RasterTileSource>(ANALYSIS_SOURCE)!
       .setTiles([ANALYSIS_URLS[method as HsAnalysis][activeSrc]]);
     map.setPaintProperty(ANALYSIS_LAYER, 'raster-opacity', 1.0);
   }
@@ -621,7 +622,7 @@ function switchSource(src: DemDsm): void {
   setInspectActiveSrc(src);
   const url = src === 'dsm' ? DSM_URL : ELEV_URL;
   const setTiles = (id: string, tiles: string[]): void => {
-    const s = map.getSource(id) as RasterTileSource | undefined;
+    const s = map.getSource<RasterTileSource>(id);
     if (s) s.setTiles(tiles);
   };
   setTiles('dem', [url]);
@@ -686,10 +687,10 @@ function addBaseLayer(layer: Parameters<typeof map.addLayer>[0]): void {
 type SourceSpec = Parameters<typeof map.addSource>[1];
 
 function demSpec(): SourceSpec {
-  return { type: 'raster-dem', tiles: [activeSrc === 'dsm' ? DSM_URL : ELEV_URL], tileSize: 256, encoding: 'mapbox', attribution: ATTR } as SourceSpec;
+  return { type: 'raster-dem', tiles: [activeSrc === 'dsm' ? DSM_URL : ELEV_URL], tileSize: 256, encoding: 'mapbox', attribution: ATTR };
 }
 function rasterSpec(url: string): SourceSpec {
-  return { type: 'raster', tiles: [url], tileSize: 256, attribution: ATTR } as SourceSpec;
+  return { type: 'raster', tiles: [url], tileSize: 256, attribution: ATTR };
 }
 
 function hillshadePaint(method: HsMethod, exaggeration: number): Record<string, unknown> {
@@ -713,7 +714,7 @@ function buildElevationBase(): void {
     id: 'color-relief', type: 'color-relief', source: 'dem-relief',
     layout: { visibility: opPct > 0 ? 'visible' : 'none' },
     paint: { 'color-relief-color': buildColorExpr(stops), 'color-relief-opacity': opPct / 100 },
-  } as Parameters<typeof map.addLayer>[0]);
+  });
 }
 
 function buildHillshadeBase(): void {
@@ -728,17 +729,17 @@ function buildHillshadeBase(): void {
     id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
     layout: { visibility: 'none' },
     paint: hillshadePaint('igor', 0),
-  } as Parameters<typeof map.addLayer>[0]);
+  });
   addBaseLayer({
     id: 'hillshade-raster-layer', type: 'raster', source: 'hillshade-raster',
     layout: { visibility: 'none' },
     paint: { 'raster-opacity': 0 },
-  } as Parameters<typeof map.addLayer>[0]);
+  });
   addBaseLayer({
     id: ANALYSIS_LAYER, type: 'raster', source: ANALYSIS_SOURCE,
     layout: { visibility: 'none' },
     paint: { 'raster-opacity': 0 },
-  } as Parameters<typeof map.addLayer>[0]);
+  });
 }
 
 function enterElevationMode(): void {
@@ -775,7 +776,7 @@ function buildDiffBase(): void {
   map.addSource('dem-hillshade', demSpec());
   map.addSource(DIFF_SOURCE, {
     type: 'raster-dem', tiles: [DIFF_URL], tileSize: 256, encoding: 'mapbox', attribution: ATTR,
-  } as SourceSpec);
+  });
   const opPct = Number(el<HTMLInputElement>('sl-diff-op').value);
   addBaseLayer({
     id: DIFF_LAYER, type: 'color-relief', source: DIFF_SOURCE,
@@ -785,7 +786,7 @@ function buildDiffBase(): void {
   addBaseLayer({
     id: 'hillshade', type: 'hillshade', source: 'dem-hillshade',
     paint: hillshadePaint('igor', 0.5),
-  } as Parameters<typeof map.addLayer>[0]);
+  });
 }
 
 function enterDiffMode(): void {
@@ -823,7 +824,9 @@ function leaveInspectMode(): void {
 // addContourLayers silently fails to request its first tiles otherwise.
 function enterContourMode(): void {
   teardownBase();
-  map.once('idle', () => {
+  // map.once returns a Promise overload in MapLibre 5 even when given a
+  // listener — fire-and-forget is the intent here, so explicitly `void` it.
+  void map.once('idle', () => {
     if (activeTab === 'contour') addContourLayers();
   });
 }
@@ -891,7 +894,7 @@ function switchTab(next: TabName): void {
   // fetch, and `map.once('load', ...)` would queue against a one-shot event
   // that's already fired, leaving the tab switch silently dead.
   if (map.isStyleLoaded()) enter();
-  else map.once('style.load', enter);
+  else void map.once('style.load', enter);
 }
 
 document.querySelectorAll<HTMLButtonElement>('.rail-disc').forEach(disc => {
@@ -913,11 +916,11 @@ function restoreFromHash(): void {
   // Basemap + Labels overlay (driven by the on-map basemap control).
   const bm = p['basemap'];
   if (bm === 'none' || bm === 'aerial' || bm === 'hillshade-dem' || bm === 'hillshade-dsm' || bm === 'topolite') {
-    setBasemap(bm as BasemapId);
+    setBasemap(bm);
   }
   if (p['overlay'] === 'labels') setLabelsEnabled(true);
   const blend = p['blend'];
-  if (blend === 'dem' || blend === 'dsm') setHillshadeBlend(blend as HillshadeBlend);
+  if (blend === 'dem' || blend === 'dsm') setHillshadeBlend(blend);
 
   const mode = p['mode'];
   if (mode === 'hillshade' || mode === 'contour' || mode === 'coverage' || mode === 'export' || mode === 'diff' || mode === 'inspect') switchTab(mode);

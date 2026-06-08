@@ -13,7 +13,10 @@ function setSwatch(btnId: string, bg: string): void {
 function waitFrames(n: number): Promise<void> {
   return n <= 0
     ? Promise.resolve()
-    : new Promise(resolve => requestAnimationFrame(() => waitFrames(n - 1).then(resolve)));
+    // requestAnimationFrame expects a void return — the inner waitFrames
+    // chain feeds `resolve` but must be `void`-discarded explicitly so the
+    // rAF callback doesn't accidentally swallow a Promise.
+    : new Promise(resolve => requestAnimationFrame(() => { void waitFrames(n - 1).then(resolve); }));
 }
 
 export async function initTerrainPreviews(): Promise<void> {
@@ -45,13 +48,14 @@ export async function initTerrainPreviews(): Promise<void> {
     attributionControl: false,
     fadeDuration: 0,
     // needed so getCanvas().toDataURL() can read the WebGL framebuffer
-    preserveDrawingBuffer: true,
-  } as any);
+    // (MapLibre 5 nests this under canvasContextAttributes).
+    canvasContextAttributes: { preserveDrawingBuffer: true },
+  });
 
   try {
     await new Promise<void>((resolve) => {
       const timeout = setTimeout(resolve, 10_000);
-      m.once('idle', () => { clearTimeout(timeout); resolve(); });
+      void m.once('idle', () => { clearTimeout(timeout); resolve(); });
     });
 
     for (const method of METHODS) {
