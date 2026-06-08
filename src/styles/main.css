@@ -5,7 +5,7 @@
    Drop-in replacement for src/styles/main.css
    ============================================================ */
 
-@import 'maplibre-gl/dist/maplibre-gl.css';
+@import url('maplibre-gl/dist/maplibre-gl.css');
 /* ◀ LINZ: Open Sans (linz.govt.nz digital face) replaces Fira Sans */
 @import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap');
 
@@ -124,10 +124,7 @@ body {
 /* ── MAP ── */
 #map-wrap {
   position: fixed;
-  top: var(--hh);
-  bottom: var(--fh);
-  left: 0;
-  right: var(--pw);
+  inset: var(--hh) var(--pw) var(--fh) 0;
   transition: right 0.28s ease;
 }
 #map-wrap.panel-hidden {
